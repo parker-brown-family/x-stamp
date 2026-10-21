@@ -22,6 +22,11 @@
   const results = new Map(); // post id -> result
   const asked = new Map(); // post id -> Promise<result>
   const dropped = new Set(); // post ids whose stamp has already animated once
+  const MAX_CACHED = 500;
+  const MAX_PENDING = 30;
+  function trim(collection) {
+    while (collection.size > MAX_CACHED) collection.delete(collection.keys().next().value);
+  }
 
   // ---- reading a post -----------------------------------------------------
 
@@ -156,12 +161,16 @@
     if (!id || !post.text) return null; // a picture or video with no words: nothing to judge
     if (results.has(id)) return Promise.resolve(results.get(id));
     if (!asked.has(id)) {
+      if (asked.size >= MAX_PENDING) return null;
       asked.set(
         id,
         chrome.runtime
           .sendMessage({ type: "judge", id, post, promoted })
           .then((res) => {
-            if (res && (res.status === "stamp" || res.status === "blank")) results.set(id, res);
+            if (res && (res.status === "stamp" || res.status === "blank")) {
+              results.set(id, res);
+              trim(results);
+            }
             return res;
           })
           .catch(() => null)
@@ -183,6 +192,7 @@
     if (article.querySelector(":scope > .xstamp")?.dataset.xstampId === id) return;
     drawStamp(article, id, res.stamp, !dropped.has(id));
     dropped.add(id);
+    trim(dropped);
   }
 
   const ahead = new IntersectionObserver(
@@ -258,12 +268,14 @@
     }
   }
 
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && changes.enabled) setEnabled(changes.enabled.newValue !== false);
+  let stateReceived = false;
+  chrome.runtime.onMessage.addListener((msg, sender) => {
+    if (sender.id !== chrome.runtime.id || sender.tab || msg?.type !== "state" || typeof msg.enabled !== "boolean") return;
+    stateReceived = true;
+    setEnabled(msg.enabled);
   });
-  chrome.storage.local.get("enabled").then(({ enabled: on }) => {
-    enabled = on !== false;
-    scan();
-    setEnabled(enabled);
-  });
+  scan();
+  chrome.runtime.sendMessage({ type: "getState" }).then((state) => {
+    if (!stateReceived && typeof state?.enabled === "boolean") setEnabled(state.enabled);
+  }).catch(() => {});
 })();

@@ -154,11 +154,14 @@ export function buildRequest(post, candidates, { promoted = false } = {}) {
 // POST to OpenRouter. Resolves {ok:true, answers, usage, model, ms} or
 // {ok:false, reason, status?, ms}; never throws, so a caller cannot mistake a
 // failure for an answer.
-export async function askJev(key, body, fetchImpl = fetch) {
+export async function askJev(key, body, fetchImpl = fetch, { signal } = {}) {
   const t0 = Date.now();
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+  const abort = () => ctl.abort();
+  signal?.addEventListener("abort", abort, { once: true });
+  const timer = setTimeout(abort, TIMEOUT_MS);
   try {
+    if (signal?.aborted) return { ok: false, reason: "cancelled", ms: Date.now() - t0 };
     const res = await fetchImpl(ENDPOINT, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -174,8 +177,9 @@ export async function askJev(key, body, fetchImpl = fetch) {
     if (!json.answers || !Object.keys(json.answers).length) return { ok: false, reason: "no-answer", ms };
     return { ok: true, answers: json.answers, usage: json.usage ?? null, model: json.model ?? null, ms };
   } catch (e) {
-    return { ok: false, reason: e.name === "AbortError" ? "timeout" : "network", ms: Date.now() - t0 };
+    return { ok: false, reason: e.name === "AbortError" ? (signal?.aborted ? "cancelled" : "timeout") : "network", ms: Date.now() - t0 };
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener("abort", abort);
   }
 }

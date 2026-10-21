@@ -69,8 +69,20 @@ text**, and when present its author's display name and handle, its link-preview
 card, and the text of a post it quotes. These go to OpenRouter's
 `/api/v1/systemone` endpoint using your key. Nothing else leaves your browser:
 no browsing history, no account details, no images. Answers are cached for the
-browser session so a post is only asked about once. Full details:
+browser session, keeping the newest 500 answers within 1 MB. Older answers can
+be asked again after eviction. Full details:
 [PRIVACY.md](PRIVACY.md).
+
+Switching stamps off cancels queued uploads and aborts requests still in flight;
+data already sent cannot be recalled. An explicit **Ask Jev** in Options still
+works while stamps are off.
+
+The extension permits at most **1,000 requests per UTC day**, **60 per minute
+across tabs**, and **30 per minute from one tab**. Manual tests count too. These
+are request limits; use an OpenRouter key spending limit for a dollar cap.
+The daily allowance survives browser restarts. A cancelled request can still
+consume an allowance slot. Each post is limited to 20,000 characters, with
+separate limits on author, quote and card text; oversized posts are skipped.
 
 ## How it decides
 
@@ -101,7 +113,11 @@ npm test
 npm run e2e
 ```
 
-`npm test` checks the phrase cutter, the request and the stamp rule offline.
+`npm test` checks the phrase cutter, request, stamp rule, input and retention
+limits, cancellation, and release packaging offline. `npm run security` tests
+credentials, sender restrictions, Off, Recording, request limits, quota failures,
+and restart persistence in a disposable Chromium with a dummy key and mocked
+API responses. It makes no provider calls.
 `npm run e2e` loads the real extension into a throwaway Chromium, serves x.com
 from `test/fixture/home.html`, and asks real Jev (about $0.002 a run). Scripts
 and tests find a key in `OPENROUTER_API_KEY`, or in `OPENROUTER_API_KEY=...` in
