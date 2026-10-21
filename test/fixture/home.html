@@ -51,13 +51,15 @@
     ["1018", "Grace", "gracecooks", "What's one kitchen tool you'd actually replace the day it broke? Mine is a cheap bench scraper."],
     ["1019", "Mara Ceramics", "maramakes", "New mugs are up in the shop! Each one thrown by hand in my garage studio, only 12 this batch ☕"],
     ["1020", "Dev Opinions", "devopinions", "Every meeting that could have been an email should have been a pull request description instead."],
+    ["reply:1021", "Kai", "kaireplies", "Congrats on that! Totally agree, keep going."],
   ];
   // Mounted after load, the way X renders its timeline.
   setTimeout(() => {
     const tl = document.getElementById("timeline");
     for (const [id, name, handle, text] of posts) {
       const ad = id.startsWith("ad:");
-      const n = id.replace("ad:", "");
+      const reply = id.startsWith("reply:");
+      const n = id.replace(/^(ad|reply):/, "");
       const a = document.createElement("article");
       a.setAttribute("data-testid", "tweet");
       a.innerHTML =
@@ -65,6 +67,7 @@
         (ad ? `<span>Ad</span> <a href="/${handle}/status/${n}/analytics">·</a>`
             : `<a href="/${handle}/status/${n}"><time datetime="2026-10-21T12:00:00Z">2h</time></a>`) +
         `</div>` +
+        (reply ? `<div class="who">Replying to <a href="/devopinions">@devopinions</a></div>` : "") +
         (text ? `<div data-testid="tweetText"></div>` : "") +
         (text?.quoted ? `<div role="link" class="quoted"><div data-testid="User-Name"><b>${text.quoted[0]}</b> @${text.quoted[1]}</div><div data-testid="tweetText"></div></div>` : "") +
         (text?.card ? `<div data-testid="card.wrapper" class="card">${text.card.join("<br>")}</div>` : "") +

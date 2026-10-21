@@ -155,10 +155,25 @@
 
   const inView = new WeakSet();
 
+  // Replies are not worth a request (Parker, 2026-10-21: "comments are NOT worth
+  // it!"). On a post's own page every other post is a reply to it or part of its
+  // thread; elsewhere X marks a reply shown out of context with "Replying to".
+  function isComment(article, id) {
+    const page = location.pathname.match(/\/status\/(\d+)/);
+    if (page) return id !== page[1];
+    for (const el of article.querySelectorAll("div, span")) {
+      if (el.closest(SEL.text) || el.closest(SEL.quoted)) continue;
+      const first = el.firstChild;
+      if (first?.nodeType === 3 && /^\s*Replying to\b/.test(first.textContent)) return true;
+    }
+    return false;
+  }
+
   function ask(article) {
     if (!enabled) return null;
     const { id, post, promoted } = readPost(article);
     if (!id || !post.text) return null; // a picture or video with no words: nothing to judge
+    if (isComment(article, id)) return null;
     if (results.has(id)) return Promise.resolve(results.get(id));
     if (!asked.has(id)) {
       if (asked.size >= MAX_PENDING) return null;
@@ -254,10 +269,53 @@
     });
   }).observe(document.documentElement, { childList: true, subtree: true });
 
+  // ---- the meter: today's posts and spend, on screen ---------------------------
+
+  let meterEl = null;
+  let meterTimer = null;
+
+  function money(n) {
+    return n < 1 ? `$${n.toFixed(n < 0.01 ? 4 : 3)}` : `$${n.toFixed(2)}`;
+  }
+
+  async function refreshMeter() {
+    let m;
+    try {
+      m = await chrome.runtime.sendMessage({ type: "meter" });
+    } catch {
+      return;
+    }
+    if (!m || typeof m.posts !== "number") return;
+    if (!enabled || !m.show) {
+      meterEl?.remove();
+      meterEl = null;
+      return;
+    }
+    if (!meterEl?.isConnected) {
+      meterEl = document.createElement("div");
+      meterEl.className = "xstamp-meter";
+      meterEl.setAttribute("aria-hidden", "true");
+      document.documentElement.append(meterEl);
+    }
+    // Unknown is not zero: answers OpenRouter didn't price are shown as such.
+    const unpriced = m.unpriced ? ` +${m.unpriced} unpriced` : "";
+    const failed = m.failed ? ` · ${m.failed} failed` : "";
+    meterEl.textContent = `x-stamp today · ${m.posts}/${m.limit} posts · ${money(m.cost)}${unpriced}${failed}`;
+  }
+
+  function startMeter() {
+    clearInterval(meterTimer);
+    refreshMeter();
+    meterTimer = setInterval(() => {
+      if (document.visibilityState === "visible") refreshMeter();
+    }, 4000);
+  }
+
   // ---- on/off -------------------------------------------------------------
 
   function setEnabled(on) {
     enabled = on;
+    startMeter();
     if (on) {
       for (const a of document.querySelectorAll(SEL.post)) {
         ask(a);

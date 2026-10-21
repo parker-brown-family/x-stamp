@@ -79,3 +79,6 @@ $("clear").onclick = async () => {
 load();
 
 $("reload").onclick = () => chrome.runtime.reload();
+
+chrome.storage.local.get("showMeter").then(({ showMeter }) => { $("showMeter").checked = showMeter !== false; });
+$("showMeter").onchange = (e) => chrome.storage.local.set({ showMeter: e.target.checked });

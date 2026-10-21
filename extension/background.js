@@ -191,14 +191,22 @@ async function run(job) {
   await serialize(async () => {
     const { stats } = await chrome.storage.local.get("stats");
     const s = { requests: 0, errors: 0, cost: 0, costKnown: 0, ms: 0, lastError: null, ...stats };
+    // Today's totals (UTC day, the same day the request limit counts) for the
+    // on-screen meter. A response without a cost is counted as unpriced, never
+    // as free.
+    const day = new Date().toISOString().slice(0, 10);
+    if (s.day !== day) Object.assign(s, { day, dayRequests: 0, dayErrors: 0, dayCost: 0, dayCostKnown: 0 });
     s.requests++;
-    if (!r.ok) { s.errors++; s.lastError = r.reason; }
+    s.dayRequests++;
+    if (!r.ok) { s.errors++; s.dayErrors++; s.lastError = r.reason; }
     else {
       s.lastError = null;
       s.ms += r.ms;
       if (typeof r.usage?.cost === "number" && Number.isFinite(r.usage.cost)) {
         s.cost += r.usage.cost;
         s.costKnown++;
+        s.dayCost += r.usage.cost;
+        s.dayCostKnown++;
       }
     }
     await chrome.storage.local.set({ stats: s });
@@ -251,6 +259,22 @@ function contentSender(sender) {
 function optionsSender(sender) {
   return sender.id === chrome.runtime.id && sender.url === chrome.runtime.getURL("options.html");
 }
+// What the on-page meter may know: today's counts and cost, nothing else.
+async function meter() {
+  const { stats, showMeter } = await chrome.storage.local.get(["stats", "showMeter"]);
+  const day = new Date().toISOString().slice(0, 10);
+  const s = stats?.day === day ? stats : null;
+  const answered = s ? s.dayRequests - s.dayErrors : 0;
+  return {
+    show: showMeter !== false,
+    posts: s?.dayRequests ?? 0,
+    failed: s?.dayErrors ?? 0,
+    cost: s?.dayCost ?? 0,
+    unpriced: s ? Math.max(0, answered - s.dayCostKnown) : 0,
+    limit: LIMITS.perDay,
+  };
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   const content = contentSender(sender);
   const options = optionsSender(sender);
@@ -259,6 +283,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     await ready;
     if (msg?.type === "getState") return { enabled: await isEnabled() };
     if (msg?.type === "judge" && content) return judge(msg, sender.tab.id);
+    if (msg?.type === "meter") return meter();
     if (!options) return { status: "error", reason: "forbidden" };
     if (msg?.type === "test") return judge(msg, "options", true);
     if (msg?.type === "keySource") {

@@ -88,6 +88,10 @@ try {
 
   const byId = Object.fromEntries(rows.map((r) => [r.id, r]));
   assert.equal(byId["1005"].stamp, null, "picture-only post was stamped");
+  assert.equal(byId["1021"].stamp, null, "a reply was stamped");
+  const meterText = await page.$eval(".xstamp-meter", (e) => e.textContent).catch(() => null);
+  assert.match(meterText ?? "", /x-stamp today · \d+\/1000 posts · \$/, `no cost meter on screen: ${meterText}`);
+  step(`meter: ${meterText}`);
   assert.match(byId["1003"].stamp ?? "", /^PAID ADVERT/, "X's paid ad was not stamped PAID ADVERT");
   // One small stamp per post and nothing over the window (the film's big red box
   // and builder piles were removed, 2026-10-21).
