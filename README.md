@@ -45,6 +45,9 @@ one.
 
 That's all. There's nothing to build.
 
+Asking an AI agent to set it up for you? Point it at [AGENTS.md](AGENTS.md). It
+says how to install this without the agent ever seeing your key.
+
 ## Install
 
 1. Download this repository: **Code → Download ZIP** on GitHub, then unzip it.
