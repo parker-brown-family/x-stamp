@@ -2,6 +2,13 @@
 // worker ahead of the scroll, and drop one small glass-gel stamp on each post as
 // its spot comes into view, coloured by the post's type.
 (() => {
+  // One live copy per tab. A copy put in after a reload or update marks the
+  // page; an older copy that sees the mark stops and takes its meter with it.
+  const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  document.documentElement.dataset.xstampRun = token;
+  const superseded = () => document.documentElement.dataset.xstampRun !== token;
+  // A copy from before 0.3.7 can't step aside; clear the meter it left behind.
+  for (const el of document.querySelectorAll(".xstamp-meter")) el.remove();
   // X renames these without notice; this is the only place that knows them.
   const SEL = {
     post: 'article[data-testid="tweet"]',
@@ -296,14 +303,28 @@
   // X adds thousands of nodes as it scrolls. Rather than search each one, look
   // for new posts at most once a frame.
   let scanQueued = false;
-  new MutationObserver(() => {
+  const mutations = new MutationObserver(() => {
+    if (superseded()) return stepAside();
     if (scanQueued) return;
     scanQueued = true;
     requestAnimationFrame(() => {
       scanQueued = false;
       scan();
     });
-  }).observe(document.documentElement, { childList: true, subtree: true });
+  });
+  mutations.observe(document.documentElement, { childList: true, subtree: true });
+
+  function stepAside() {
+    if (stepAside.done) return;
+    stepAside.done = true;
+    mutations.disconnect();
+    ahead.disconnect();
+    spot.disconnect();
+    clearInterval(meterTimer);
+    meterEl?.remove();
+    meterEl = null;
+    enabled = false;
+  }
 
   // ---- the meter: today's posts and spend, on screen ---------------------------
 
@@ -350,6 +371,7 @@
   }
 
   async function refreshMeter() {
+    if (superseded()) return stepAside();
     let m;
     try {
       m = await chrome.runtime.sendMessage({ type: "meter" });

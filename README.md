@@ -98,9 +98,11 @@ If that's your browser, use the next route.
 git -C ~/x-stamp pull
 ```
 
-Then quit and restart the browser. If stamps still behave like the old version,
-open x-stamp's options page and press **Reload extension**. Chromium sometimes
-keeps running an old copy of an extension's background code across restarts.
+Then quit and restart the browser, or press **Reload extension** on x-stamp's
+options page. X tabs that are already open pick up the new version on their
+own. If stamps still behave like the old version after a restart, press
+**Reload extension**: Chromium sometimes keeps running an old copy of an
+extension's background code across restarts.
 
 ### Removing
 

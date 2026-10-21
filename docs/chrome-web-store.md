@@ -78,6 +78,7 @@ repository can keep its name.
 | `storage` | Saves the user's OpenRouter key, the on/off switch, running cost totals, and answers for the current session, so each post is labelled once. |
 | Host `https://openrouter.ai/*` | The only network call: sends a post's text to the Jev model on OpenRouter to get its label, authorised with the user's own key. |
 | Content script on `https://x.com/*` and `https://twitter.com/*` | Reads the text of posts on X and draws the stamp on them. Runs on no other site. |
+| `scripting`, with host `https://x.com/*` and `https://twitter.com/*` | After the extension is installed or updated, puts its stamping script back into X tabs that were already open, so they don't go blank until reloaded. Used on X only. |
 
 **Remote code:** "No, I am not using remote code." Every script is in the
 package; the network call returns JSON labels, never code.

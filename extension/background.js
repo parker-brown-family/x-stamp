@@ -101,7 +101,26 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (!on) cancelWork();
   broadcast(on).catch(console.error);
 });
-chrome.runtime.onInstalled.addListener(() => {
+// Chrome puts content scripts into a tab only when the page loads, so after an
+// install, an update or a Reload every X tab already open has no live x-stamp:
+// no meter, no stamps, no error (Parker, 2026-10-21: "after clicking around a
+// bit we lose the extension"). Put it back into each one; the copy already
+// there, cut off by the reload, sees the newer one and steps aside.
+async function reinject(reason) {
+  const tabs = await chrome.tabs.query({ url: ["https://x.com/*", "https://twitter.com/*"] });
+  const results = await Promise.allSettled(tabs.map(async (tab) => {
+    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["stamp.css"] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+  }));
+  // Kept for diagnosis: when it ran, why, and what failed.
+  await chrome.storage.session.set({ reinjected: {
+    at: Date.now(), reason, tabs: tabs.length,
+    failed: results.filter((r) => r.status === "rejected").map((r) => String(r.reason?.message ?? r.reason).slice(0, 160)),
+  } });
+}
+
+chrome.runtime.onInstalled.addListener((details) => {
+  reinject(details?.reason).catch((e) => chrome.storage.session.set({ reinjected: { at: Date.now(), error: String(e?.message ?? e) } }));
   (async () => {
     await ready;
     const { enabled } = await chrome.storage.local.get("enabled");

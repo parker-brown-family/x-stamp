@@ -144,6 +144,38 @@ try {
   assert.equal((await stats()).requests, TEXT_POSTS, "a reload asked Jev again");
   step("reloaded: stamps back from the cache, no new requests");
 
+  // A newer copy arriving in an open X tab, as after an install, update or
+  // Reload (Parker, 2026-10-21: "after clicking around a bit we lose the
+  // extension"): the tab keeps one meter and keeps stamping, no page reload.
+  const open = await ctx.newPage();
+  await open.goto("https://x.com/home?many");
+  await open.waitForSelector(".xstamp-meter");
+  const runBefore = await open.evaluate(() => document.documentElement.dataset.xstampRun);
+  // Headless Chromium doesn't bring an extension back after chrome.runtime.reload()
+  // when it was loaded from the command line, so inject the newer copy the same
+  // way reinject() does after a real install, update or Reload.
+  await sw.evaluate(async () => {
+    const tabs = await chrome.tabs.query({ url: ["https://x.com/*"] });
+    for (const t of tabs) {
+      await chrome.scripting.insertCSS({ target: { tabId: t.id }, files: ["stamp.css"] });
+      await chrome.scripting.executeScript({ target: { tabId: t.id }, files: ["content.js"] });
+    }
+  });
+  await open.waitForFunction((r) => document.documentElement.dataset.xstampRun !== r, runBefore, { timeout: 15000 });
+  const stampedBefore = await open.$$eval(".xstamp", (e) => e.length);
+  for (let i = 0; i < 6; i++) { await open.mouse.wheel(0, 700); await open.waitForTimeout(900); }
+  await open.waitForTimeout(2500);
+  const after = await open.evaluate(() => ({
+    meters: document.querySelectorAll(".xstamp-meter").length,
+    meter: document.querySelector(".xstamp-meter")?.textContent ?? "",
+    stamps: document.querySelectorAll(".xstamp").length,
+  }));
+  step(`newer copy injected into an open tab: ${after.meters} meter, stamps ${stampedBefore} → ${after.stamps}`);
+  assert.equal(after.meters, 1, "expected exactly one meter after a newer copy arrived");
+  assert.ok(!/reload this tab/.test(after.meter), "the tab was left asking to be reloaded");
+  assert.ok(after.stamps > stampedBefore, "no new stamps after reloading the extension");
+  await open.close();
+
   // A power scroll (Parker's demo, 2026-10-21): ten screens a second to the
   // bottom of 120 posts, then stop. Posts flown past shouldn't be paid for, and
   // the posts the scroll stops on must still be stamped.

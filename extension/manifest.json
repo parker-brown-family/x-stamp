@@ -1,13 +1,16 @@
 {
   "manifest_version": 3,
   "name": "x-stamp",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Stamps each X post with what it wants from you and six of its own words, picked by Jev.",
   "permissions": [
-    "storage"
+    "storage",
+    "scripting"
   ],
   "host_permissions": [
-    "https://openrouter.ai/*"
+    "https://openrouter.ai/*",
+    "https://x.com/*",
+    "https://twitter.com/*"
   ],
   "background": {
     "service_worker": "background.js",
