@@ -22,14 +22,25 @@ request there: <https://openrouter.ai/privacy>.
 Nothing else is sent: no browsing history, no pages other than x.com, no images,
 no information about your X account, and nothing to the extension's author.
 
+Switching stamps off cancels waiting uploads and aborts active requests. Data
+already transmitted cannot be recalled. An explicit **Ask Jev** in Options can
+send the sample you enter while stamps are off. All requests share the limits
+of 1,000 per UTC day, 60 per minute overall, and 30 per minute per tab. Use an
+OpenRouter key spending limit for a dollar cap.
+
 ## What stays in your browser
 
-- Your OpenRouter key, in Chrome's extension storage on your computer.
-- Jev's answers for the current browser session, so a post is asked about once.
+- Your OpenRouter key, in Chrome's extension storage on your computer. Only
+  trusted extension pages and the worker can access it; content scripts cannot.
+- Up to 500 recent answers within 1 MB for the current browser session. Answers
+  evicted from this cache can be requested again.
+- A daily request counter, retained across browser restarts. Recent request
+  times and tab IDs, kept in session storage to enforce request limits.
 - Running totals: posts asked, failures, and cost reported by OpenRouter.
 - If you turn on **Recording** in the options page: up to 300 recent posts with
-  Jev's answers, so you can download them to tune the extension. Off by default.
-  **Clear recordings** deletes them.
+  Jev's answers within 2 MB, so you can download them to tune the extension.
+  Off by default. **Clear recordings** deletes them and prevents pending answers
+  from restoring them. Disabling Recording prevents pending recording writes.
 
 The extension has no server, no analytics and no tracking. Removing the extension
 removes everything it stored.
