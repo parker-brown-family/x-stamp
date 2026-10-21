@@ -77,3 +77,5 @@ $("clear").onclick = async () => {
 };
 
 load();
+
+$("reload").onclick = () => chrome.runtime.reload();

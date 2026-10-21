@@ -27,6 +27,22 @@ OpenRouter). That key spends the person's money, so:
 
 ## Install, for a person who just wants to use it
 
+**On Omarchy** (there's a `~/.config/chromium-flags.conf`), you can do steps 1–2
+yourself, because they don't involve the key:
+
+```
+git clone https://github.com/parker-brown-family/x-stamp ~/x-stamp
+```
+```
+~/x-stamp/scripts/omarchy-install.sh
+```
+
+Then **they** quit the browser completely and restart it (don't kill their
+browser for them; it holds their open tabs), and go on from step 3 below. Undo
+with `scripts/omarchy-install.sh --uninstall`.
+
+**Anywhere else:**
+
 1. Get the repo onto their machine: `git clone https://github.com/parker-brown-family/x-stamp`, or GitHub's **Code → Download ZIP**.
 2. Have them open `chrome://extensions`, turn on **Developer mode**, click **Load
    unpacked**, and choose the `extension` folder. Chrome pages can't be automated,

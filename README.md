@@ -50,17 +50,62 @@ says how to install this without the agent ever seeing your key.
 
 ## Install
 
-1. Download this repository: **Code → Download ZIP** on GitHub, then unzip it.
-   Or `git clone` it.
-2. In Chrome, open `chrome://extensions` and turn on **Developer mode** (top
-   right).
-3. Click **Load unpacked** and choose the `extension` folder inside it.
-4. The options page opens. Paste your OpenRouter key, press **Save**, then press
-   **Ask Jev** to check it works.
-5. Pin the stamp icon. Click it, or press **Alt+Shift+S**, to switch stamps on
-   and off.
+### On Omarchy: one command, no Developer mode
 
-Then open <https://x.com> and scroll.
+Omarchy loads its own Chromium extensions (Copy URL, yt-dlp, WhatsApp Slim) from
+a line in `~/.config/chromium-flags.conf`. x-stamp installs onto the same line.
+
+1. Get the code:
+   ```
+   git clone https://github.com/parker-brown-family/x-stamp ~/x-stamp
+   ```
+2. Add it to your browser:
+   ```
+   ~/x-stamp/scripts/omarchy-install.sh
+   ```
+   It adds `~/x-stamp/extension` to the `--load-extension=` line of every
+   browser flags file you have (Chromium, Brave, Edge), keeps a `.bak-x-stamp`
+   copy of each, and leaves the other extensions alone. Omarchy updates append
+   to that line rather than rewrite it, so x-stamp stays.
+3. **Quit the browser completely and start it again.** Flags are read only at
+   launch, so a new window isn't enough. Close every window (or run
+   `pkill chromium`), then open it from the launcher.
+4. x-stamp's options page opens on first start. Paste your OpenRouter key, press
+   **Save**, then **Ask Jev**. A stamp title in the result means it works.
+5. Pin the stamp icon. Click it, or press **Alt+Shift+S**, to switch stamps on
+   and off. Then open <https://x.com> and scroll.
+
+Branded Google Chrome ignores this way of loading extensions (since Chrome 137).
+If that's your browser, use the next route.
+
+### Any Chromium browser, by hand
+
+1. Download this repository (**Code → Download ZIP**, then unzip) or `git clone`
+   it.
+2. Open `chrome://extensions` and turn on **Developer mode** (top right).
+3. Click **Load unpacked** and choose the `extension` folder inside it.
+4. Steps 4 and 5 above: paste your key, **Save**, **Ask Jev**, pin the icon.
+
+### Updating
+
+```
+git -C ~/x-stamp pull
+```
+
+Then quit and restart the browser. If stamps still behave like the old version,
+open x-stamp's options page and press **Reload extension**. Chromium sometimes
+keeps running an old copy of an extension's background code across restarts.
+
+### Removing
+
+On Omarchy:
+
+```
+~/x-stamp/scripts/omarchy-install.sh --uninstall
+```
+
+Then restart the browser. Installed by hand: remove it from `chrome://extensions`.
+Either way, removing it deletes your key and everything it stored.
 
 ## What it sends, and where
 
