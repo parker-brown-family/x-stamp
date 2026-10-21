@@ -1,0 +1,23 @@
+type 34/40 · title 28/34 · second card 4/4 · 20 cases × 2 runs
+cost $0.000121 per post (40 reported) · 197 ms per post
+
+[me] Unpopular opinion but after 10 years in  → CAREER HOT TAKE 0.94 “single most important skill nobody talks about is writing clearly”  |  CAREER HOT TAKE 0.94 “single most important skill nobody talks about is writing clearly”
+[me] BREAKING: The Federal Reserve cuts inter → MONEY NEWS 1.00 “cuts interest rates by 0.25%, the first cut since March”  |  MONEY NEWS 1.00 “cuts interest rates by 0.25%, the first cut since March”
+[me] I quit my 6-figure job 18 months ago. To → BUSINESS ADVICE 0.52 + BUSINESS SELF-PROMO 0.99 “Today my SaaS hit $40k MRR”  |  BUSINESS ADVICE (faint) 0.49 + BUSINESS SELF-PROMO 0.99 “Today my SaaS hit $40k MRR”
+[me] Reply with the last photo in your camera → ENGAGEMENT HARVEST 0.99 “last photo in your camera roll”  |  ENGAGEMENT HARVEST 1.00 “Reply with the last photo in your camera roll”
+[me] Does anyone know a good dentist in Calga → HEALTH QUESTION 1.00 “good dentist in Calgary that takes new patients?”  |  HEALTH QUESTION 1.00 “good dentist in Calgary that takes new patients?”
+[parker] If you still use tabs instead of spaces  → TECH HOT TAKE 0.53 + TECH JOKE 0.93 “use tabs instead of spaces”  |  TECH HOT TAKE 0.50 + TECH JOKE 0.93 “use tabs instead of spaces”
+[parker] hey, I'm Dana, founder of a tiny brand s → BUSINESS BUILDER AD <3 0.68 + ENGAGEMENT CONNECT 0.99 “help founders tidy up their profiles and posts”  |  BUSINESS BUILDER AD <3 0.73 + ENGAGEMENT CONNECT 0.99 “help founders tidy up their profiles and posts”
+[parker] Dear algorithm,  Please connect me with  → ENGAGEMENT CONNECT 0.80 + BUILDER AD <3 0.96 “I'm Mia and I'm building a notes app”  |  ENGAGEMENT CONNECT 0.78 + AI BUILDER AD <3 0.96 “I'm Mia and I'm building a notes app”
+[parker] It's official: my weight now starts with → FITNESS UPDATE 0.70 “It's official: my weight now starts with a "1"”  |  FITNESS UPDATE 0.70 “It's official: my weight now starts with a "1"”
+[parker] My grandmother says thank you for all th → FAMILY UPDATE 0.78 “can't believe how many people liked her photo”  |  FAMILY UPDATE 0.81 “can't believe how many people liked her photo”
+[me] Six months ago I walked back into a chur → FAITH UPDATE 0.99 “Baptized this morning”  |  FAITH UPDATE 0.99 “Baptized this morning”
+[me] 365 days sober today. A year ago I could → ADDICTION UPDATE 0.88 “365 days sober today”  |  ADDICTION UPDATE 0.90 “365 days sober today”
+[me] We closed our seed round this week, $2.1 → BUSINESS UPDATE (faint) 0.49 “closed our seed round this week, $2.1M led by Foundry”  |  BUSINESS UPDATE 0.51 “closed our seed round this week, $2.1M led by Foundry”
+[parker] We can fix everything. Even the newest l → — “can fix everything. Even the newest laptops!”  |  — “can fix everything. Even the newest laptops!”
+[parker] Unpopular opinion: remote work made ever → ENGAGEMENT HARVEST 0.70 + CAREER HOT TAKE 0.91 “remote work made everyone worse at their jobs”  |  ENGAGEMENT HARVEST 0.64 + CAREER HOT TAKE 0.90 “remote work made everyone worse at their jobs”
+[parker] Six months into running my own design st → CAREER HOT TAKE 0.51 + CAREER UPDATE 0.98 “running my own design studio. Best decision I ever made”  |  CAREER HOT TAKE 0.53 + CAREER UPDATE 0.98 “running my own design studio. Best decision I ever made”
+[me] Just shipped v2 of my little habit track → TECH BUILDER AD <3 0.91 “Just shipped v2 of my little habit tracker”  |  TECH BUILDER AD <3 0.91 “Just shipped v2 of my little habit tracker”
+[parker] 2000❤️🎉  So glad you're all here!  One  → ADVICE 0.71 “growth isn't a straight line”  |  ADVICE 0.72 “growth isn't a straight line”
+[me] new pic, thoughts? 😘 be honest          → ENGAGEMENT THIRST 0.94 “new pic”  |  ENGAGEMENT THIRST 0.95 “new pic”
+[me] Ship faster with Acme Cloud. Deploy any  → PAID ADVERT 0.92 “Acme Cloud. Deploy any app in 30 seconds”  |  PAID ADVERT 0.92 “Acme Cloud. Deploy any app in 30 seconds”

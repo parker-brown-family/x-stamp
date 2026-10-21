@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Refuse to commit a credential. Install with: ./scripts/hooks/install.sh
+#
+# Two independent checks, because they fail for different reasons:
+#   1. an env file staged by NAME — the usual accident, a wildcard `git add`
+#   2. a key-shaped STRING staged in any file — the one .gitignore cannot catch,
+#      because the key gets pasted into a script, a README, or a results file
+#
+# Prints the file and line, never the secret. Bypass for a deliberate fixture with
+# `git commit --no-verify`, and be sure it really is a fixture.
+set -uo pipefail
+
+staged() { git diff --cached --name-only --diff-filter=ACMR; }
+
+fail=0
+
+# ---- 1. env files by name -------------------------------------------------------
+while IFS= read -r f; do
+  case "$(basename "$f")" in
+    .env|.env.*|*.env|.envrc|.netrc|id_rsa|id_ed25519|*.pem|*.p12)
+      echo "BLOCKED  $f — an environment or key file, staged by name" >&2
+      fail=1
+      ;;
+  esac
+done < <(staged)
+
+# ---- 2. key-shaped strings by content --------------------------------------------
+# Each pattern is anchored on a vendor prefix plus a length floor, so ordinary prose
+# and base64 blobs do not trip it. A pattern that cries wolf gets switched off, and
+# then nothing is enforced.
+PATTERNS='sk-or-v1-[A-Za-z0-9]{24,}|sk-ant-[A-Za-z0-9_-]{24,}|sk-proj-[A-Za-z0-9_-]{24,}|ghp_[A-Za-z0-9]{30,}|gho_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{50,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|xox[baprs]-[A-Za-z0-9-]{20,}'
+
+while IFS= read -r f; do
+  [ -f "$f" ] || continue
+  # Only the ADDED lines of the staged version, so an old file does not re-block.
+  hits=$(git diff --cached -U0 -- "$f" \
+         | grep -n '^+' \
+         | grep -InE "$PATTERNS" \
+         | cut -d: -f1 \
+         | head -3)
+  if [ -n "$hits" ]; then
+    echo "BLOCKED  $f — a staged line matches a credential pattern" >&2
+    echo "         (line numbers are into the staged diff, not the file; the value is not printed)" >&2
+    fail=1
+  fi
+done < <(staged)
+
+if [ "$fail" -ne 0 ]; then
+  cat >&2 <<'MSG'
+
+Nothing was committed. Unstage the offending file, put the value in .env
+(gitignored) via ./scripts/set-key.sh, and read it with jev.dotenv at runtime.
+
+If a match is genuinely a fixture, commit with --no-verify and say so in the message.
+MSG
+  exit 1
+fi
+exit 0

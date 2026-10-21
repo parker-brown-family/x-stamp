@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<!-- A stand-in for x.com/home with the four things x-stamp reads: the post
+     article, its text, its timestamp permalink, and an ad's analytics link.
+     The posts are the six from the 2026-10-21 probe, an ad, a post with only a
+     picture, a builder post whose link X splits into pieces, a quote post, and
+     filler to scroll through. -->
+<head>
+<meta charset="utf-8">
+<title>Home / X</title>
+<style>
+  body { margin: 0; background: rgb(0, 0, 0); color: rgb(231, 233, 234); font: 15px/20px -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { width: 600px; margin: 0 auto; border-left: 1px solid #2f3336; border-right: 1px solid #2f3336; }
+  article { position: relative; overflow: hidden; padding: 12px 16px; border-bottom: 1px solid #2f3336; min-height: 120px; }
+  .who { color: #71767b; margin-bottom: 4px; }
+  .who b { color: rgb(231, 233, 234); }
+  .who a { color: #71767b; text-decoration: none; }
+  [data-testid="tweetText"] { white-space: pre-wrap; }
+  .media { margin-top: 10px; height: 180px; border-radius: 16px; background: linear-gradient(135deg, #1d9bf0, #7856ff); }
+  .quoted, .card { margin-top: 10px; padding: 10px 12px; border: 1px solid #2f3336; border-radius: 16px; color: #71767b; }
+  .bar { margin-top: 10px; color: #71767b; display: flex; gap: 48px; }
+</style>
+</head>
+<body>
+<main id="timeline"></main>
+<script>
+  const posts = [
+    ["1001", "Dana Kim", "danakim", "Unpopular opinion but after 10 years in tech the single most important skill nobody talks about is writing clearly. Not coding. Writing. 🧵👇"],
+    ["1002", "Markets Desk", "marketsdesk", "BREAKING: The Federal Reserve cuts interest rates by 0.25%, the first cut since March. Markets rallied on the news."],
+    ["ad:1003", "Acme Cloud", "acmecloud", "Ship faster with Acme Cloud. Deploy any app in 30 seconds, free for your first 3 months. Start building today."],
+    ["1004", "Jules", "julesbuilds", "I quit my 6-figure job 18 months ago. Today my SaaS hit $40k MRR. Here's exactly how I did it (bookmark this) 👇"],
+    ["1005", "Picture Only", "pics", null],
+    ["1006", "Sam", "sam_yyc", "Does anyone know a good dentist in Calgary that takes new patients? Mine just retired."],
+    ["1007", "Reply Guy", "replyguy", "Reply with the last photo in your camera roll. No cheating. Let's go 👀"],
+    ["1008", "Dev Opinions", "devopinions", "If you still use tabs instead of spaces you are genuinely a danger to society and should not be allowed near a keyboard"],
+    ["1009", "Rin Sato", "rinbuilds", {
+      html: 'To try it out, tap the picture and play with a few of the characters in \n\n<a href="https://t.co/xyz"><span>https://</span><span>pixelpals.app/play/gallery?v</span><span>=2</span><span>…</span></a>\ncome sign up!',
+      card: ["pixelpals.app", "Meet the Pixel Pals cast", "Swipe three Pixel Pals characters and poke them to see a reaction."],
+    }],
+    ["1010", "Jo Park", "jopark", {
+      text: "This is just incredible!!!",
+      quoted: ["Lee Moreno", "leemoreno", "Big news: meet Canvas Studio, made by a friend and me! Our open source, all-in-one creative app that runs on your own hardware has been redesigned and rebuilt from the ground up."],
+    }],
+    ["1011", "Priya", "priyaships", "Just shipped v2 of my little habit tracker 🎉 Offline-first, no account needed, free on iOS. Would love your feedback!"],
+    ["1012", "Weather Now", "weathernow", "Snowfall warning for Calgary: 15 to 25 cm expected overnight, with gusts up to 70 km/h. Travel will be difficult by morning."],
+    ["1013", "Nia", "niareads", "Finished my 50th book of the year today. Didn't think I'd make it after that slump in July!"],
+    ["1014", "Ops Lead", "opslead", "Stop putting secrets in environment variables on shared CI runners. Use short-lived tokens from your identity provider instead."],
+    ["1015", "Hot Takes Daily", "hottakesdaily", "Pineapple on pizza is objectively correct and I will not be taking questions at this time."],
+    ["1016", "Tom", "tomcodes", "Open-sourced the CLI I use to tidy my dotfiles. MIT, about 400 lines of Rust, PRs welcome."],
+    ["1017", "City Hall", "cityhall", "The Bow River pathway between 10th St and Centre St closes Monday for six weeks of bridge repairs. Detour signs are posted."],
+    ["1018", "Grace", "gracecooks", "What's one kitchen tool you'd actually replace the day it broke? Mine is a cheap bench scraper."],
+    ["1019", "Mara Ceramics", "maramakes", "New mugs are up in the shop! Each one thrown by hand in my garage studio, only 12 this batch ☕"],
+    ["1020", "Dev Opinions", "devopinions", "Every meeting that could have been an email should have been a pull request description instead."],
+  ];
+  // Mounted after load, the way X renders its timeline.
+  setTimeout(() => {
+    const tl = document.getElementById("timeline");
+    for (const [id, name, handle, text] of posts) {
+      const ad = id.startsWith("ad:");
+      const n = id.replace("ad:", "");
+      const a = document.createElement("article");
+      a.setAttribute("data-testid", "tweet");
+      a.innerHTML =
+        `<div class="who" data-testid="User-Name"><b>${name}</b> @${handle} · ` +
+        (ad ? `<span>Ad</span> <a href="/${handle}/status/${n}/analytics">·</a>`
+            : `<a href="/${handle}/status/${n}"><time datetime="2026-10-21T12:00:00Z">2h</time></a>`) +
+        `</div>` +
+        (text ? `<div data-testid="tweetText"></div>` : "") +
+        (text?.quoted ? `<div role="link" class="quoted"><div data-testid="User-Name"><b>${text.quoted[0]}</b> @${text.quoted[1]}</div><div data-testid="tweetText"></div></div>` : "") +
+        (text?.card ? `<div data-testid="card.wrapper" class="card">${text.card.join("<br>")}</div>` : "") +
+        (text ? "" : `<div class="media"></div>`) +
+        `<div class="bar"><span>💬 41</span><span>🔁 12</span><span>♥ 380</span></div>`;
+      const [own, q] = a.querySelectorAll('[data-testid="tweetText"]');
+      if (typeof text === "string") own.textContent = text;
+      else if (text?.html) own.innerHTML = text.html;
+      else if (text?.text) own.textContent = text.text;
+      if (q) q.textContent = text.quoted[2];
+      tl.append(a);
+    }
+  }, 200);
+</script>
+</body>
+</html>

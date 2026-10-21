@@ -1,0 +1,18 @@
+
+current: 17/21 name the subject
+  Unpopular opinion but after 10 y ✓ writing clearly. Not coding. Writing  |  ✓ writing clearly. Not coding. Writing  |  ✓ writing clearly. Not coding. Writing
+  BREAKING: The Federal Reserve cu ✓ cuts interest rates by 0.25%  |  ✓ Federal Reserve cuts interest rates  |  ✓ cuts interest rates by 0.25%
+  Ship faster with Acme Cloud. Dep ✓ Ship faster with Acme Cloud  |  ✓ Ship faster with Acme Cloud  |  ✓ Ship faster with Acme Cloud
+  I quit my 6-figure job 18 months ✓ Today my SaaS hit $40k MRR  |  ✓ Today my SaaS hit $40k MRR  |  ✓ Today my SaaS hit $40k MRR
+  Does anyone know a good dentist  ✓ good dentist in Calgary  |  ✓ good dentist in Calgary  |  ✓ good dentist in Calgary
+  Reply with the last photo in you ✗ No cheating  |  ✓ last photo in your camera roll  |  ✓ last photo in your camera roll
+  If you still use tabs instead of ✗ genuinely a danger to society  |  ✗ genuinely a danger to society  |  ✗ genuinely a danger to society
+
+subject: 21/21 name the subject
+  Unpopular opinion but after 10 y ✓ writing clearly. Not coding. Writing  |  ✓ writing clearly. Not coding. Writing  |  ✓ writing clearly. Not coding. Writing
+  BREAKING: The Federal Reserve cu ✓ Federal Reserve cuts interest rates  |  ✓ Federal Reserve cuts interest rates  |  ✓ Federal Reserve cuts interest rates
+  Ship faster with Acme Cloud. Dep ✓ Ship faster with Acme Cloud  |  ✓ Ship faster with Acme Cloud  |  ✓ Ship faster with Acme Cloud
+  I quit my 6-figure job 18 months ✓ Today my SaaS hit $40k MRR  |  ✓ Today my SaaS hit $40k MRR  |  ✓ Today my SaaS hit $40k MRR
+  Does anyone know a good dentist  ✓ dentist in Calgary that takes new  |  ✓ dentist in Calgary that takes new  |  ✓ dentist in Calgary that takes new
+  Reply with the last photo in you ✓ last photo in your camera roll  |  ✓ last photo in your camera roll  |  ✓ last photo in your camera roll
+  If you still use tabs instead of ✓ use tabs instead of spaces  |  ✓ use tabs instead of spaces  |  ✓ use tabs instead of spaces

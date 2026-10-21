@@ -1,0 +1,30 @@
+
+### Unpopular opinion but after 10 years in tech the single most important  (60 spans, 238 ms)
+  verdict: 'HOT TAKE' conf=0.97  top5='HOT TAKE'=0.97; 'ENGAGEMENT BAIT'=0.02; 'ADVICE'=0.01; 'NEWS'=0.00; 'RAGE BAIT'=0.00
+  gist: 'nobody talks about is writing clearly.' conf=0.18  top5='nobody talks about is writing clearly.'=0.19; 'writing clearly. Not coding. Writing.'=0.15; 'skill nobody talks about is writing'=0.12; 'writing clearly. Not coding.'=0.11; 'Not coding. Writing.'=0.07
+  coverage: skill[0.26] nobody[0.41] talks[0.43] about[0.47] is[0.39] writing[0.68] clearly.[0.64] Not[0.46] coding.[0.47] Writing.[0.30]
+
+### BREAKING: The Federal Reserve cuts interest rates by 0.25%, the first   (52 spans, 441 ms)
+  verdict: 'NEWS' conf=1  top5='NEWS'=1.00; 'HOT TAKE'=0.00; 'RAGE BAIT'=0.00; 'SELF-PROMO'=0.00; 'AD'=0.00
+  gist: 'cuts interest rates by 0.25%' conf=0.37  top5='cuts interest rates by 0.25%'=0.38; 'Federal Reserve cuts interest rates'=0.23; 'Markets rallied on the news.'=0.09; 'cuts interest rates'=0.06; '0.25%, the first cut since March.'=0.04
+  coverage: Federal[0.28] Reserve[0.30] cuts[0.74] interest[0.73] rates[0.74] by[0.44] Markets[0.17] rallied[0.16]
+
+### I quit my 6-figure job 18 months ago. Today my SaaS hit $40k MRR. Here  (59 spans, 275 ms)
+  verdict: 'SELF-PROMO' conf=0.4  top5='SELF-PROMO'=0.45; 'ADVICE'=0.32; 'ENGAGEMENT BAIT'=0.21; 'AD'=0.01; 'LIFE UPDATE'=0.01
+  gist: 'Today my SaaS hit $40k MRR.' conf=0.49  top5='Today my SaaS hit $40k MRR.'=0.50; 'SaaS hit $40k MRR.'=0.28; 'hit $40k MRR.'=0.05; 'quit my 6-figure job'=0.04; '6-figure job 18 months ago.'=0.03
+  coverage: my[0.58] Today[0.52] my[0.58] SaaS[0.81] hit[0.86] $40k[0.87] MRR.[0.85]
+
+### Reply with the last photo in your camera roll. No cheating. Let's go 👀  (23 spans, 236 ms)
+  verdict: 'ENGAGEMENT BAIT' conf=1  top5='ENGAGEMENT BAIT'=1.00; 'NEWS'=0.00; 'HOT TAKE'=0.00; 'RAGE BAIT'=0.00; 'SELF-PROMO'=0.00
+  gist: 'last photo in your camera roll.' conf=0.62  top5='last photo in your camera roll.'=0.64; 'No cheating.'=0.20; 'photo in your camera roll.'=0.06; 'camera roll. No cheating.'=0.04; 'Reply with the last photo'=0.02
+  coverage: last[0.66] photo[0.72] in[0.70] your[0.70] camera[0.75] roll.[0.76] No[0.27] cheating.[0.27]
+
+### Does anyone know a good dentist in Calgary that takes new patients? Mi  (35 spans, 244 ms)
+  verdict: 'QUESTION' conf=1  top5='QUESTION'=1.00; 'NEWS'=0.00; 'HOT TAKE'=0.00; 'RAGE BAIT'=0.00; 'SELF-PROMO'=0.00
+  gist: 'good dentist in Calgary' conf=0.19  top5='good dentist in Calgary'=0.21; 'know a good dentist in Calgary'=0.12; 'Mine just retired.'=0.10; 'Calgary that takes new patients?'=0.10; 'dentist in Calgary'=0.06
+  coverage: know[0.26] a[0.25] good[0.50] dentist[0.58] in[0.42] Calgary[0.52] takes[0.24] new[0.25] patients?[0.26] Mine[0.22] just[0.23] retired.[0.22]
+
+### If you still use tabs instead of spaces you are genuinely a danger to   (34 spans, 215 ms)
+  verdict: 'RAGE BAIT' conf=0.65  top5='RAGE BAIT'=0.68; 'HOT TAKE'=0.17; 'JOKE'=0.15; 'NEWS'=0.00; 'SELF-PROMO'=0.00
+  gist: 'genuinely a danger to society' conf=0.4  top5='genuinely a danger to society'=0.42; 'still use tabs instead of spaces'=0.17; 'use tabs instead of spaces'=0.14; 'tabs instead of spaces'=0.09; 'danger to society'=0.05
+  coverage: still[0.20] use[0.35] tabs[0.44] instead[0.41] of[0.40] spaces[0.41] genuinely[0.45] a[0.48] danger[0.51] to[0.48] society[0.48] a[0.48]

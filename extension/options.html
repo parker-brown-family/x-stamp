@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>x-stamp</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 38rem; margin: 2.5rem auto; padding: 0 1rem; color: #111; }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1rem; margin: 2rem 0 0.4rem; }
+  label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+  input[type=password], textarea { width: 100%; box-sizing: border-box; padding: 0.45rem; font: inherit; }
+  textarea { height: 4.5rem; }
+  button { font: inherit; padding: 0.35rem 0.9rem; margin: 0.5rem 0.4rem 0 0; cursor: pointer; }
+  .note { color: #555; font-size: 0.9rem; }
+  #saved, #testOut { margin-top: 0.5rem; white-space: pre-wrap; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 1rem; }
+  dt { color: #555; }
+</style>
+</head>
+<body>
+<h1>x-stamp</h1>
+<p class="note">Click the toolbar icon, or press Alt+Shift+S, to switch stamps on or off.</p>
+
+<h2>Key</h2>
+<label for="key">OpenRouter API key</label>
+<input id="key" type="password" autocomplete="off" spellcheck="false">
+<button id="save">Save</button>
+<div id="saved" class="note"></div>
+<p class="note">Stored in this browser's extension storage only.</p>
+
+<h2>Try it</h2>
+<label for="sample">A post</label>
+<textarea id="sample">BREAKING: The Federal Reserve cuts interest rates by 0.25%, the first cut since March. Markets rallied on the news.</textarea>
+<button id="test">Ask Jev</button>
+<div id="testOut"></div>
+
+<h2>So far</h2>
+<dl id="stats"></dl>
+
+<h2>Recording</h2>
+<label><input id="record" type="checkbox"> Keep each post with Jev's answers (last 300), for tuning the thresholds</label>
+<button id="export">Download recordings</button>
+<button id="clear">Clear recordings</button>
+<div id="recCount" class="note"></div>
+
+<script type="module" src="options.js"></script>
+</body>
+</html>

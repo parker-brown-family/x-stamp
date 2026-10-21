@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Open X in a Chromium of its own with x-stamp loaded from this checkout.
+#
+# Branded Chrome stopped honouring --load-extension in version 137; Arch's
+# Chromium still does, so this needs no Developer mode and no clicks. The profile
+# persists, so the X sign-in is done once. Edits to the extension are picked up
+# on the next launch.
+set -euo pipefail
+here="$(cd "$(dirname "$0")/.." && pwd)"
+ext="$here/extension"
+profile="${X_STAMP_PROFILE:-$HOME/.local/share/x-stamp/chromium}"
+[ -f "$ext/key.local.json" ] || "$here/scripts/install-key.sh"
+mkdir -p "$profile"
+# Chromium keeps running a cached copy of a command-line extension's service
+# worker across restarts, even after a version bump (measured 2026-10-21: new
+# content.js, old background.js, every stamp blank). This profile exists only for
+# x-stamp, so clear its service-worker store and let every worker register
+# fresh; x.com's own worker re-registers on the next page load.
+rm -rf "$profile/Default/Service Worker"
+# A shell started outside the desktop session (an agent, ssh) has no display set.
+if [ -z "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ] && [ -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/wayland-1" ]; then
+  export WAYLAND_DISPLAY=wayland-1
+fi
+# Dark mode (Parker, 2026-10-21: "white mode yuk!"). This Chromium never reports
+# prefers-color-scheme: dark to pages here, whatever it is told (--force-dark-mode,
+# --blink-settings, its own Dark setting: all measured, X stayed white), so X's
+# own Lights out display setting is set once in this profile by
+# scripts/x-dark.mjs. --force-dark-mode only darkens the browser frame.
+# X_STAMP_DEBUG_PORT opens a loopback DevTools port, for recording demos
+# (scripts/demo.mjs). Off unless asked for.
+debug=()
+[ -n "${X_STAMP_DEBUG_PORT:-}" ] && debug=(--remote-debugging-port="$X_STAMP_DEBUG_PORT" --remote-debugging-address=127.0.0.1)
+setsid nohup chromium \
+  --user-data-dir="$profile" \
+  "${debug[@]}" \
+  --load-extension="$ext" \
+  --no-first-run --no-default-browser-check \
+  --force-dark-mode \
+  "${1:-https://x.com/home}" >/dev/null 2>&1 &
