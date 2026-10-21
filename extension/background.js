@@ -127,9 +127,17 @@ function admit(job) {
     const count = daily?.day === day ? daily.count : 0;
     const { requestWindow = [] } = await chrome.storage.session.get("requestWindow");
     const recent = requestWindow.filter((r) => r.at > now - 60000);
-    if (count >= LIMITS.perDay) return { error: "daily-limit" };
+    if (count >= LIMITS.perDay) {
+      await chrome.storage.local.set({ limited: { reason: "daily-limit", at: now } });
+      return { error: "daily-limit" };
+    }
     if (recent.length >= LIMITS.perMinute ||
-        recent.filter((r) => r.tab === job.tab).length >= LIMITS.perTabMinute) return { error: "rate-limited" };
+        recent.filter((r) => r.tab === job.tab).length >= LIMITS.perTabMinute) {
+      // Remembered so the meter can say so: a held-back post used to look like
+      // x-stamp had died.
+      await chrome.storage.local.set({ limited: { reason: "rate-limited", at: now } });
+      return { error: "rate-limited" };
+    }
     // Reserve before sending. Cancellation may consume a slot, never exceed a cap.
     await chrome.storage.local.set({ dailyRequests: { day, count: count + 1 } });
     await chrome.storage.session.set({ requestWindow: [...recent, { at: now, tab: job.tab }] });
@@ -285,7 +293,7 @@ function totals(rows) {
   return t;
 }
 async function meter() {
-  const { stats, showMeter } = await chrome.storage.local.get(["stats", "showMeter"]);
+  const { stats, showMeter, limited } = await chrome.storage.local.get(["stats", "showMeter", "limited"]);
   const s = stats ?? {};
   const days = s.days ?? {};
   const now = new Date();
@@ -311,6 +319,10 @@ async function meter() {
     week: { ...week, partial: weekPartial },
     all,
     limit: LIMITS.perDay,
+    // Held back by a limit in the last 20 s (or today, for the daily cap).
+    paused: limited && (limited.reason === "daily-limit"
+      ? new Date(limited.at).toISOString().slice(0, 10) === today
+      : Date.now() - limited.at < 20000) ? limited.reason : null,
   };
 }
 

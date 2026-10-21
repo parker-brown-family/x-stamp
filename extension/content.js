@@ -202,6 +202,7 @@
     if (existing && existing.dataset.xstampId === id) return;
     if (existing) removeStamp(article, false);
     const res = await ask(article);
+    if (res?.status === "error" && (res.reason === "rate-limited" || res.reason === "busy")) return retryLater(article, id);
     if (!res || res.status !== "stamp") return;
     if (!enabled || postId(article) !== id || !inView.has(article)) return;
     if (article.querySelector(":scope > .xstamp")?.dataset.xstampId === id) return;
@@ -210,12 +211,47 @@
     trim(dropped);
   }
 
+  // Fast scrolling flies past posts nobody reads. While the page moves faster
+  // than about 2.5 screens a second, nothing is asked ahead, and a post that
+  // comes into view is asked only if the scroll stops on it.
+  let lastScroll = { y: scrollY, t: performance.now() };
+  let fastUntil = 0;
+  addEventListener("scroll", () => {
+    const now = performance.now();
+    const dt = now - lastScroll.t;
+    if (dt > 0 && Math.abs(scrollY - lastScroll.y) / dt > (innerHeight * 2.5) / 1000) fastUntil = now + 300;
+    lastScroll = { y: scrollY, t: now };
+  }, { passive: true });
+  const flying = () => performance.now() < fastUntil;
+
   const ahead = new IntersectionObserver(
     (entries) => {
+      if (flying()) return;
       for (const e of entries) if (e.isIntersecting) ask(e.target);
     },
     { rootMargin: AHEAD },
   );
+
+  // Show once the scroll has settled on the post.
+  function settleThenShow(article) {
+    if (!flying()) return show(article);
+    setTimeout(() => {
+      if (inView.has(article)) settleThenShow(article);
+    }, 250);
+  }
+
+  // A post held back by a rate limit or a full queue is asked again while it's
+  // still on screen, a few times, further apart each time.
+  const retries = new Map();
+  function retryLater(article, id) {
+    const n = (retries.get(id) ?? 0) + 1;
+    if (n > 5) return;
+    retries.set(id, n);
+    trim(retries);
+    setTimeout(() => {
+      if (inView.has(article) && postId(article) === id) show(article);
+    }, 2500 * n);
+  }
 
   // A one-pixel marker where the ordinary stamp lands: "is the stamp's spot on
   // screen" is the right question for a tall post, "is the post" the wrong one.
@@ -226,7 +262,7 @@
         if (!article) continue;
         if (e.isIntersecting) {
           inView.add(article);
-          show(article);
+          settleThenShow(article);
         } else {
           inView.delete(article);
         }
@@ -318,6 +354,16 @@
     try {
       m = await chrome.runtime.sendMessage({ type: "meter" });
     } catch {
+      // After the extension is reloaded or updated, this tab's copy is cut off
+      // from it for good. Say so rather than look dead.
+      if (!chrome.runtime?.id && meterEl?.isConnected) {
+        clearInterval(meterTimer);
+        meterEl.replaceChildren();
+        const p = document.createElement("div");
+        p.className = "xstamp-meter-paused";
+        p.textContent = "x-stamp updated · reload this tab";
+        meterEl.append(p);
+      }
       return;
     }
     if (!m || !m.today || !m.all) return;
@@ -337,6 +383,12 @@
       row("WEEK", m.week, m.week.partial ? "≥" : ""),
       row("ALL", m.all),
     );
+    if (m.paused) {
+      const p = document.createElement("div");
+      p.className = "xstamp-meter-paused";
+      p.textContent = m.paused === "daily-limit" ? `PAUSED · ${m.limit} posts today` : "PAUSED · slow down";
+      meterEl.append(p);
+    }
     meterEl.title = `x-stamp spend on Jev. Today ${m.today.posts}/${m.limit} posts. Week is the UTC week from Monday.`;
     placeMeter();
   }

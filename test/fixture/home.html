@@ -54,6 +54,11 @@
     ["1020", "Dev Opinions", "devopinions", "Every meeting that could have been an email should have been a pull request description instead."],
     ["reply:1021", "Kai", "kaireplies", "Congrats on that! Totally agree, keep going."],
   ];
+  // ?many adds 100 more posts, for the power-scroll test.
+  if (location.search.includes("many")) {
+    const topics = ["shipping a side project", "learning to cook", "a new running route", "rent in the city", "a bug that took all day", "a good book", "the local hockey team", "moving apartments", "a podcast episode", "fixing an old bike"];
+    for (let i = 0; i < 100; i++) posts.push([String(2000 + i), `Person ${i}`, `person${i}`, `Day ${i} of writing about ${topics[i % topics.length]}. Today went better than yesterday, and I learned one small thing worth sharing.`]);
+  }
   // Mounted after load, the way X renders its timeline.
   setTimeout(() => {
     const tl = document.getElementById("timeline");

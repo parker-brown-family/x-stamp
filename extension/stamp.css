@@ -234,3 +234,10 @@
   color: #6b7280;
   font-weight: 500;
 }
+
+.xstamp-meter-paused {
+  margin-top: 0.15rem;
+  color: #fbbf24;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+}

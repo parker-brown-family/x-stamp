@@ -173,11 +173,16 @@ test("extension security boundaries and lifecycle", { timeout: 60000 }, async (t
     });
     await t.test("per-tab and global minute limits reject excess work", async () => {
       await reset();
-      await startBatch(LIMITS.perTabMinute); await finishBatch();
+      // In queue-sized chunks: one batch bigger than active + pending would get
+      // "busy" answers that never reach the per-tab count.
+      const chunk = LIMITS.active + LIMITS.pending;
+      for (let sent = 0; sent < LIMITS.perTabMinute; sent += chunk) {
+        await startBatch(Math.min(chunk, LIMITS.perTabMinute - sent)); await finishBatch();
+      }
       assert.equal((await send(msg())).reason, "rate-limited");
       const other = await world(await ctx.newPage());
-      await sw.evaluate(() => chrome.storage.session.set({ requestWindow: Array.from({ length: 59 },
-        () => ({ at: Date.now(), tab: -1 })) }));
+      await sw.evaluate((n) => chrome.storage.session.set({ requestWindow: Array.from({ length: n },
+        () => ({ at: Date.now(), tab: -1 })) }), LIMITS.perMinute - 1);
       assert.equal((await other("chrome.runtime.sendMessage(" + JSON.stringify(msg()) + ")")).status, "stamp");
       assert.equal((await other("chrome.runtime.sendMessage(" + JSON.stringify(msg()) + ")")).reason, "rate-limited");
     });

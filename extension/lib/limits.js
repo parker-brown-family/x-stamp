@@ -2,8 +2,11 @@
 export const LIMITS = Object.freeze({
   active: 6,
   pending: 24,
-  perMinute: 60,
-  perTabMinute: 30,
+  // A power scroll asked 33 posts in 20 s against the first 30-per-tab limit and
+  // every stamp after it stopped (2026-10-21). Posts flown past are no longer
+  // asked about, and the daily cap still bounds spend.
+  perMinute: 120,
+  perTabMinute: 60,
   perDay: 1000,
   cacheEntries: 500,
   cacheBytes: 1024 * 1024,

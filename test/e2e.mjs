@@ -144,6 +144,29 @@ try {
   assert.equal((await stats()).requests, TEXT_POSTS, "a reload asked Jev again");
   step("reloaded: stamps back from the cache, no new requests");
 
+  // A power scroll (Parker's demo, 2026-10-21): ten screens a second to the
+  // bottom of 120 posts, then stop. Posts flown past shouldn't be paid for, and
+  // the posts the scroll stops on must still be stamped.
+  const fast = await ctx.newPage();
+  await fast.goto("https://x.com/home?many");
+  await fast.waitForFunction(() => document.querySelectorAll('article[data-testid="tweet"]').length > 100);
+  const before = (await stats()).requests;
+  for (let i = 0; i < 40; i++) {
+    await fast.mouse.wheel(0, 900 * 2);
+    await fast.waitForTimeout(100);
+  }
+  const passed = await fast.$$eval('article[data-testid="tweet"]', (as) => as.filter((a) => a.getBoundingClientRect().bottom < 0).length);
+  const duringFlight = (await stats()).requests - before;
+  await fast.waitForTimeout(4000);
+  const landed = await fast.$$eval('article[data-testid="tweet"]', (as) => {
+    const vis = as.filter((a) => { const r = a.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && a.querySelector('[data-testid="tweetText"]'); });
+    return { visible: vis.length, stamped: vis.filter((a) => a.querySelector(":scope > .xstamp")).length };
+  });
+  step(`power scroll: flew past ${passed} posts with ${duringFlight} requests; where it stopped, ${landed.stamped}/${landed.visible} fully visible posts stamped`);
+  assert.ok(duringFlight < passed / 3, `power scroll paid for ${duringFlight} of ${passed} posts flown past`);
+  assert.ok(landed.visible > 0 && landed.stamped >= landed.visible - 1, `stamps died after a power scroll: ${landed.stamped}/${landed.visible}`);
+  await fast.close();
+
   console.log(`\nPASS · ${s.requests} requests · avg ${Math.round(s.ms / (s.requests - s.errors))} ms per answer · ` +
     (s.costKnown ? `$${(s.cost / s.costKnown).toFixed(6)} per post` : "cost not reported"));
 } finally {
