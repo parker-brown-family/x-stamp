@@ -195,10 +195,21 @@ async function run(job) {
     // on-screen meter. A response without a cost is counted as unpriced, never
     // as free.
     const day = new Date().toISOString().slice(0, 10);
+    // Per-day history for the week and day figures; the day fields below are
+    // the 0.3.4 shape and seed today's entry when upgrading mid-day.
+    s.days = s.days && typeof s.days === "object" ? s.days : {};
+    if (!s.days[day]) {
+      s.days[day] = s.day === day
+        ? { posts: s.dayRequests, errors: s.dayErrors, cost: s.dayCost, priced: s.dayCostKnown }
+        : { posts: 0, errors: 0, cost: 0, priced: 0 };
+    }
+    for (const d of Object.keys(s.days).sort().slice(0, -60)) delete s.days[d]; // keep 60 days
     if (s.day !== day) Object.assign(s, { day, dayRequests: 0, dayErrors: 0, dayCost: 0, dayCostKnown: 0 });
+    const today = s.days[day];
+    today.posts++;
     s.requests++;
     s.dayRequests++;
-    if (!r.ok) { s.errors++; s.dayErrors++; s.lastError = r.reason; }
+    if (!r.ok) { s.errors++; s.dayErrors++; today.errors++; s.lastError = r.reason; }
     else {
       s.lastError = null;
       s.ms += r.ms;
@@ -207,6 +218,8 @@ async function run(job) {
         s.costKnown++;
         s.dayCost += r.usage.cost;
         s.dayCostKnown++;
+        today.cost += r.usage.cost;
+        today.priced++;
       }
     }
     await chrome.storage.local.set({ stats: s });
@@ -259,18 +272,44 @@ function contentSender(sender) {
 function optionsSender(sender) {
   return sender.id === chrome.runtime.id && sender.url === chrome.runtime.getURL("options.html");
 }
-// What the on-page meter may know: today's counts and cost, nothing else.
+// What the on-page meter may know: spend today, this week and all time, and
+// post counts. Nothing else crosses to the page.
+function totals(rows) {
+  const t = { posts: 0, cost: 0, unpriced: 0, failed: 0 };
+  for (const r of rows) {
+    t.posts += r.posts;
+    t.cost += r.cost;
+    t.failed += r.errors;
+    t.unpriced += Math.max(0, r.posts - r.errors - r.priced);
+  }
+  return t;
+}
 async function meter() {
   const { stats, showMeter } = await chrome.storage.local.get(["stats", "showMeter"]);
-  const day = new Date().toISOString().slice(0, 10);
-  const s = stats?.day === day ? stats : null;
-  const answered = s ? s.dayRequests - s.dayErrors : 0;
+  const s = stats ?? {};
+  const days = s.days ?? {};
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  // the UTC week, Monday first
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7)));
+  const weekStart = monday.toISOString().slice(0, 10);
+  const week = totals(Object.entries(days).filter(([d]) => d >= weekStart).map(([, r]) => r));
+  // History starts with 0.3.5. If requests happened before the oldest day on
+  // record and that day is inside this week, the week total is a lower bound.
+  const recorded = totals(Object.values(days)).posts;
+  const oldest = Object.keys(days).sort()[0];
+  const weekPartial = (s.requests ?? 0) > recorded && (!oldest || oldest > weekStart);
+  const all = {
+    posts: s.requests ?? 0,
+    cost: s.cost ?? 0,
+    failed: s.errors ?? 0,
+    unpriced: Math.max(0, (s.requests ?? 0) - (s.errors ?? 0) - (s.costKnown ?? 0)),
+  };
   return {
     show: showMeter !== false,
-    posts: s?.dayRequests ?? 0,
-    failed: s?.dayErrors ?? 0,
-    cost: s?.dayCost ?? 0,
-    unpriced: s ? Math.max(0, answered - s.dayCostKnown) : 0,
+    today: totals(days[today] ? [days[today]] : []),
+    week: { ...week, partial: weekPartial },
+    all,
     limit: LIMITS.perDay,
   };
 }

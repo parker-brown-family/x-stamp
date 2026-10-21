@@ -183,27 +183,54 @@
   pointer-events: none;
 }
 
-/* ---- the meter: today's posts and spend, bottom centre ------------------- */
+/* ---- the meter: spend today, this week and all time, beside X's logo ---- */
 
 .xstamp-meter {
-  --ink: #94a3b8;
+  --ink: #a5b4fc;
   position: fixed;
-  left: 50%;
-  bottom: 10px;
   z-index: 2147483000;
-  transform: translateX(-50%);
-  padding: 0.3rem 0.9rem 0.35rem;
-  border-radius: 999px;
+  transform: translateY(-50%);
+  display: grid;
+  gap: 0.05rem;
+  padding: 0.3rem 0.6rem 0.35rem;
+  border-radius: 0.6rem;
   border: 2px solid var(--ink);
   border-top-color: color-mix(in srgb, var(--ink) 55%, white);
+  border-left-color: color-mix(in srgb, var(--ink) 55%, white);
   border-bottom-color: color-mix(in srgb, var(--ink) 50%, black);
-  background: linear-gradient(180deg, rgba(20, 24, 30, 0.82), rgba(8, 10, 12, 0.9));
+  border-right-color: color-mix(in srgb, var(--ink) 50%, black);
+  background: linear-gradient(180deg, rgba(20, 24, 30, 0.84), rgba(8, 10, 12, 0.92));
   backdrop-filter: blur(6px);
-  box-shadow: inset 0 0 12px color-mix(in srgb, var(--ink) 40%, transparent), 0 6px 16px rgba(0, 0, 0, 0.5);
+  /* one glass-gel element, lit like the stamps: the rim's light cast in, a halo out */
+  --glow: color-mix(in srgb, var(--ink) 60%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 0 16px var(--glow),
+    0 0 14px var(--glow),
+    0 8px 18px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 0 8px var(--glow);
   color: #e5e7eb;
-  font: 700 0.78rem/1.2 "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, monospace;
-  letter-spacing: 0.03em;
+  font: 700 0.7rem/1.25 "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, monospace;
   white-space: nowrap;
-  pointer-events: none;
+  pointer-events: auto;
   user-select: none;
+}
+.xstamp-meter-row {
+  display: grid;
+  grid-template-columns: 3.4em auto 3em;
+  gap: 0.5em;
+  align-items: baseline;
+}
+.xstamp-meter-label {
+  color: #94a3b8;
+  letter-spacing: 0.08em;
+}
+.xstamp-meter-cost {
+  text-align: right;
+  color: #f3f4f6;
+}
+.xstamp-meter-posts {
+  text-align: right;
+  color: #6b7280;
+  font-weight: 500;
 }

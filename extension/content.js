@@ -278,6 +278,41 @@
     return n < 1 ? `$${n.toFixed(n < 0.01 ? 4 : 3)}` : `$${n.toFixed(2)}`;
   }
 
+  // Beside X's logo, top left (Parker: "up at the top left near X"). Falls back
+  // to the corner when the logo can't be found.
+  function placeMeter() {
+    if (!meterEl) return;
+    const logo = document.querySelector('header[role="banner"] h1 a, a[aria-label="X"]');
+    const r = logo?.getBoundingClientRect();
+    if (r && r.width) {
+      meterEl.style.left = `${Math.round(r.right + 8)}px`;
+      meterEl.style.top = `${Math.round(r.top + r.height / 2)}px`;
+    } else {
+      meterEl.style.left = "12px";
+      meterEl.style.top = "30px";
+    }
+  }
+
+  function row(label, t, extra = "") {
+    const div = document.createElement("div");
+    div.className = "xstamp-meter-row";
+    const l = document.createElement("span");
+    l.className = "xstamp-meter-label";
+    l.textContent = label;
+    const v = document.createElement("span");
+    v.className = "xstamp-meter-cost";
+    // Unknown is not zero: unpriced answers and partial history are marked.
+    v.textContent = `${extra}${money(t.cost)}${t.unpriced ? "+" : ""}`;
+    const n = document.createElement("span");
+    n.className = "xstamp-meter-posts";
+    n.textContent = `${t.posts}`;
+    div.append(l, v, n);
+    if (t.unpriced || t.failed) {
+      div.title = [t.unpriced && `${t.unpriced} answers had no price from OpenRouter`, t.failed && `${t.failed} failed`].filter(Boolean).join(", ");
+    }
+    return div;
+  }
+
   async function refreshMeter() {
     let m;
     try {
@@ -285,7 +320,7 @@
     } catch {
       return;
     }
-    if (!m || typeof m.posts !== "number") return;
+    if (!m || !m.today || !m.all) return;
     if (!enabled || !m.show) {
       meterEl?.remove();
       meterEl = null;
@@ -297,10 +332,13 @@
       meterEl.setAttribute("aria-hidden", "true");
       document.documentElement.append(meterEl);
     }
-    // Unknown is not zero: answers OpenRouter didn't price are shown as such.
-    const unpriced = m.unpriced ? ` +${m.unpriced} unpriced` : "";
-    const failed = m.failed ? ` · ${m.failed} failed` : "";
-    meterEl.textContent = `x-stamp today · ${m.posts}/${m.limit} posts · ${money(m.cost)}${unpriced}${failed}`;
+    meterEl.replaceChildren(
+      row("TODAY", m.today),
+      row("WEEK", m.week, m.week.partial ? "≥" : ""),
+      row("ALL", m.all),
+    );
+    meterEl.title = `x-stamp spend on Jev. Today ${m.today.posts}/${m.limit} posts. Week is the UTC week from Monday.`;
+    placeMeter();
   }
 
   function startMeter() {
@@ -309,6 +347,7 @@
     meterTimer = setInterval(() => {
       if (document.visibilityState === "visible") refreshMeter();
     }, 4000);
+    addEventListener("resize", placeMeter, { passive: true });
   }
 
   // ---- on/off -------------------------------------------------------------

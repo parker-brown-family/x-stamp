@@ -28,8 +28,9 @@ The stamp's colour is the post's type, the same on every post:
 
 Replies are skipped: on a post's own page only that post is stamped, and
 elsewhere anything marked "Replying to" is left alone, so replies cost nothing.
-A small meter at the bottom of X shows today's posts and spend (turn it off in
-the options page).
+A small meter beside the X logo shows what x-stamp has spent today, this week
+(UTC, from Monday) and all time, with post counts (turn it off in the options
+page).
 
 A topic goes in front when it's clear (`MONEY NEWS`, `TECH HOT TAKE`). When a
 post is also a second type, the stamp carries a small `+ ENGAGEMENT HARVEST`
