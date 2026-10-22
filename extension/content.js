@@ -110,17 +110,17 @@
   }
 
   // Chrome downloads a language's model only in answer to a click or a key
-  // press. The first one on X after a post in a new language fetches it; until
-  // then that language's quotes stay as written.
+  // press, and spends the gesture on the first one asked for: a second create()
+  // in the same click is refused. So each click or key press on X fetches one
+  // waiting language; until then its quotes stay as written.
   function fetchWanted() {
     if (!wanted.size || !navigator.userActivation?.isActive) return;
-    for (const lang of wanted) {
-      translators.set(lang, Translator.create({ sourceLanguage: lang, targetLanguage: READER }).catch(() => {
-        translators.delete(lang);
-        return null;
-      }));
-    }
-    wanted.clear();
+    const [lang] = wanted;
+    wanted.delete(lang);
+    translators.set(lang, Translator.create({ sourceLanguage: lang, targetLanguage: READER }).catch(() => {
+      translators.delete(lang);
+      return null;
+    }));
   }
   addEventListener("pointerdown", fetchWanted, { capture: true, passive: true });
   addEventListener("keydown", fetchWanted, { capture: true, passive: true });
