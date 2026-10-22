@@ -84,7 +84,8 @@
   // model is here, against about 180 ms for Jev (Chrome 155, 2026-10-21). It
   // runs as the answer arrives, usually two screens before the post does.
   const READER = (navigator.language || "en").split("-")[0].toLowerCase();
-  // Never hold a stamp for a translation: past this, the post's own words show.
+  // Never hold a stamp for a translation: past this, the post's own words show
+  // until the translation arrives.
   const TRANSLATE_MS = 250;
   const translators = new Map(); // language -> Promise<Translator | null>
   const wanted = new Set(); // languages whose model is not on this device yet
@@ -129,7 +130,7 @@
   // The answer with its quote translated, or as it came when the translation
   // isn't back in time. Chrome translates one quote at a time, so a burst of
   // answers (a reload, served from the cache) queues up; a translation that
-  // lands late goes to `late`, for posts whose stamp isn't drawn yet.
+  // lands late goes to `late`.
   async function translated(res, lang, late) {
     const quote = res?.status === "stamp" ? res.stamp.quote : null;
     if (!quote || !foreign(lang)) return res;
@@ -310,6 +311,30 @@
   const PLAIN_INK = "#94a3b8";
   const ink = (type) => INK[type] ?? PLAIN_INK;
 
+  function quoteInto(q, quote) {
+    q.textContent = `“${quote.text}”`;
+    // A translated quote is no longer the post's own words: say where from.
+    if (quote.from) {
+      const l = document.createElement("span");
+      l.className = "xstamp-lang";
+      l.textContent = quote.from.toUpperCase();
+      q.append(l);
+    }
+  }
+
+  // A translation that missed the stamp: kept for the post's next stamp, and
+  // put into the one already showing the original words (Parker, 2026-10-21:
+  // long Japanese quotes on the first screen stayed Japanese for good).
+  function lateQuote(id, later) {
+    if (!results.has(id)) return;
+    results.set(id, later);
+    const el = document.querySelector(`.xstamp[data-xstamp-id="${id}"]`);
+    const q = el?.querySelector(".xstamp-quote");
+    if (!q || !el.parentElement) return;
+    quoteInto(q, later.stamp.quote);
+    fit(el.parentElement, el);
+  }
+
   function card(cls, type, titleText, quote, faint, also) {
     const el = document.createElement("div");
     el.className = `xstamp-card ${cls}${faint ? " xstamp-faint" : ""}`;
@@ -323,14 +348,7 @@
     if (quote?.text) {
       const q = document.createElement("div");
       q.className = "xstamp-quote";
-      q.textContent = `“${quote.text}”`;
-      // A translated quote is no longer the post's own words: say where from.
-      if (quote.from) {
-        const l = document.createElement("span");
-        l.className = "xstamp-lang";
-        l.textContent = quote.from.toUpperCase();
-        q.append(l);
-      }
+      quoteInto(q, quote);
       el.append(q);
     }
     // A second type rides inside the same card, small, in its own colour: one
@@ -414,7 +432,7 @@
         id,
         chrome.runtime
           .sendMessage({ type: "judge", id, post, promoted })
-          .then((res) => translated(res, lang, (later) => results.has(id) && results.set(id, later)))
+          .then((res) => translated(res, lang, (later) => lateQuote(id, later)))
           .then((res) => {
             if (res && (res.status === "stamp" || res.status === "blank")) {
               results.set(id, res);

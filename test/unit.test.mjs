@@ -36,6 +36,20 @@ test("a long post keeps every short run before any long one, within the Choice l
   assert.ok(cands.every((c) => c.end - c.start <= 6));
 });
 
+test("Japanese, written without spaces, is cut into words: short verbatim quotes that don't start on a particle", () => {
+  const ja = "朝起きてすぐサプリ飲んだけど、なんか胃がムかムかした。やっぱ朝は水分補給 first じゃなきゃな。";
+  const cands = cutCandidates(ja);
+  assert.ok(cands.length > 20, `only ${cands.length} candidates`);
+  for (const c of cands) {
+    assert.ok(ja.includes(c.text), `not verbatim: ${c.text}`);
+    assert.ok(c.text.length <= 30, `a paragraph, not a quote: ${c.text}`);
+    assert.ok(!/^[はがをにのとでもへや]/.test(c.text), `starts on a particle: ${c.text}`);
+  }
+  assert.ok(cands.some((c) => c.text.includes("水分補給 first")), "the space before an English word was lost");
+  assert.equal(cutCandidates("私も休みます。").length > 0, true, "a short post with no spaces offers no quote");
+  assert.equal(tidy("私も休みます。"), "私も休みます");
+});
+
 test("one request asks type, engagement kind, category, quote and every second-card check", () => {
   const body = buildRequest({ text: POST }, cutCandidates(POST));
   const keys = Object.keys(body.questions);

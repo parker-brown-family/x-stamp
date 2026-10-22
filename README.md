@@ -47,7 +47,7 @@ saying where it came from: `“The answers are diamond” FI`. Chrome fetches a
 language's translator the first time you click or press a key on X after a
 post in that language shows up; until then those quotes stay as written. A
 translation takes about 25 ms. A stamp never waits more than 250 ms for one:
-past that it shows the post's own words.
+past that it shows the post's own words until the translation arrives.
 
 Replying works the other way. Under a post in another language, the reply box
 gets a `TRANSLATE TO JAPANESE` chip (or whatever the post's language is) beside

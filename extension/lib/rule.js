@@ -88,5 +88,5 @@ export function decideStamp(answers, candidates, { promoted = false } = {}, t = 
 
 // Trailing full stops and commas read as noise on a stamp; ? and ! carry meaning.
 export function tidy(phrase) {
-  return phrase.replace(/[.,;:…]+$/u, "");
+  return phrase.replace(/[.,;:…。、]+$/u, "");
 }
