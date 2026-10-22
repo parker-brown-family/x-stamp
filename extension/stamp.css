@@ -99,7 +99,8 @@
 
 /* ---- the reply box: translate the draft into the post's language ---------- */
 
-.xstamp-say {
+.xstamp-say,
+.xstamp-fetch {
   --ink: #14b8a6;
   align-self: center;
   flex: none;
@@ -116,12 +117,38 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.xstamp-say:hover {
+.xstamp-say:hover,
+.xstamp-fetch:hover {
   filter: brightness(1.25);
 }
-.xstamp-say:disabled {
+.xstamp-say:disabled,
+.xstamp-fetch:disabled {
   cursor: progress;
   opacity: 0.7;
+}
+
+/* ---- a post's own page: the whole post, translated under it ------------- */
+
+.xstamp-whole {
+  margin: 0.7rem 0 0.2rem;
+  padding: 0.5rem 0.8rem 0.6rem;
+  border-left: 3px solid #14b8a6;
+  border-radius: 0.25rem 0.8rem 0.8rem 0.25rem;
+  background: rgba(20, 184, 166, 0.07);
+}
+.xstamp-whole-tag {
+  margin-bottom: 0.3rem;
+  color: color-mix(in srgb, #14b8a6 45%, white);
+  font: 800 0.7rem/1.2 "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.xstamp-whole-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.xstamp-whole .xstamp-fetch {
+  margin: 0.15rem 0;
 }
 
 .xstamp-readback {

@@ -200,14 +200,15 @@ try {
   assert.ok(landed.visible > 0 && landed.stamped >= landed.visible - 1, `stamps died after a power scroll: ${landed.stamped}/${landed.visible}`);
   await fast.close();
 
-  // Replying in the post's language. Playwright's Chromium has the Translator
+  // A post's own page in another language: the whole post translated under
+  // it, and replying in its language. Playwright's Chromium has the Translator
   // API on https pages but runs with component updates off, so it can't fetch
   // a language. The test works in x-stamp's own isolated world (the page's
-  // globals never reach it): with the API taken away there is no chip; with a
-  // stand-in the chip has to appear, swap the draft, read it back, give the
-  // English back, and step back to TRANSLATE once the translation is edited.
-  // Real translation and X's own editor were checked live in Chrome 155
-  // (docs/plans/reply-translate).
+  // globals never reach it): with the API taken away there is no panel and no
+  // chip. The stand-in then behaves like Chrome on x.com: the reader's own
+  // language is ready, any other is "downloadable" until it is created inside
+  // a click. Real translation and X's own editor were checked live in Chrome
+  // 155 (docs/plans/reply-translate).
   const post = await ctx.newPage();
   const cdp = await ctx.newCDPSession(post);
   let world = null;
@@ -216,10 +217,20 @@ try {
   });
   await cdp.send("Runtime.enable");
   const inWorld = async (expression) => (await cdp.send("Runtime.evaluate", { contextId: world, expression, awaitPromise: true, returnByValue: true })).result.value;
-  const standIn = () => inWorld(`self.Translator = {
-    availability: async () => "available",
-    create: async ({ sourceLanguage: s, targetLanguage: t }) => ({ translate: async (x) => "[" + s + ">" + t + "] " + x }),
-  }; document.body.append(document.createElement("i"));`);
+  const standIn = () => inWorld(`(() => {
+    const ready = new Set();
+    self.Translator = {
+      availability: async ({ sourceLanguage: s, targetLanguage: t }) => (s === "en" || ready.has(s + t) ? "available" : "downloadable"),
+      create: async ({ sourceLanguage: s, targetLanguage: t }) => {
+        if (s !== "en" && !ready.has(s + t)) {
+          if (!navigator.userActivation.isActive) throw new DOMException("Requires a user gesture", "NotAllowedError");
+          ready.add(s + t);
+        }
+        return { translate: async (x) => "[" + s + ">" + t + "] " + x };
+      },
+    };
+    document.body.append(document.createElement("i"));
+  })()`);
   await post.goto("https://x.com/tanaka_builds/status/3001");
   await post.waitForFunction(() => document.querySelector(".xstamp-meter"));
   assert.ok(world, "never saw x-stamp's isolated world");
@@ -227,7 +238,17 @@ try {
   await inWorld(`delete self.Translator; document.body.append(document.createElement("i"));`);
   await post.waitForTimeout(300);
   assert.equal(await post.$$eval(".xstamp-say", (e) => e.length), 0, "a translate chip stayed with no Translator");
+  assert.equal(await post.$$eval(".xstamp-whole", (e) => e.length), 0, "a translation panel stayed with no Translator");
   await standIn();
+  const whole = post.locator(".xstamp-whole");
+  await whole.waitFor({ timeout: 3000 });
+  assert.equal(await whole.locator(".xstamp-whole-tag").innerText(), "JAPANESE → ENGLISH");
+  const fetch = whole.locator(".xstamp-fetch");
+  assert.equal(await fetch.innerText(), "TRANSLATE FROM JAPANESE", "Japanese not yet fetched for x.com, but no button offered the click");
+  await fetch.click();
+  const source = await post.locator('article [data-testid="tweetText"]').innerText();
+  await post.waitForFunction((want) => document.querySelector(".xstamp-whole-text")?.textContent === want, `[ja>en] ${source}`);
+  step("post page: no panel without a Translator; with one, a click fetches Japanese and the whole post shows translated under it");
   const box = post.locator('[data-testid="tweetTextarea_0"]');
   const chip = post.locator(".xstamp-say");
   await chip.waitFor({ timeout: 3000 });
@@ -257,6 +278,7 @@ try {
   await standIn();
   await post.waitForTimeout(500);
   assert.equal(await post.$$eval(".xstamp-say", (e) => e.length), 0, "a translate chip appeared under a post in the reader's own language");
+  assert.equal(await post.$$eval(".xstamp-whole", (e) => e.length), 0, "a translation panel appeared under a post in the reader's own language");
   await post.close();
 
   console.log(`\nPASS · ${s.requests} requests · avg ${Math.round(s.ms / (s.requests - s.errors))} ms per answer · ` +

@@ -49,6 +49,13 @@ post in that language shows up; until then those quotes stay as written. A
 translation takes about 25 ms. A stamp never waits more than 250 ms for one:
 past that it shows the post's own words until the translation arrives.
 
+Open a post in another language and the whole post shows translated under its
+text, with its stamp still on it. When Chrome hasn't fetched that language for
+x.com yet, the panel holds a `TRANSLATE FROM CHINESE` button (or whatever the
+language is) instead, because Chrome downloads a language only after a click
+on the page. That click also translates every stamp that was waiting on the
+language.
+
 Replying works the other way. Under a post in another language, the reply box
 gets a `TRANSLATE TO JAPANESE` chip (or whatever the post's language is) beside
 **Reply**. It swaps your draft for the translation and shows a faint line under

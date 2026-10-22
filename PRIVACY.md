@@ -27,6 +27,9 @@ it into your browser's language on your computer. The quote is not sent
 anywhere to be translated. The first time a language needs translating, Chrome
 downloads its translator once, after you click or press a key on x.com.
 
+The whole-post translation shown under a post on its own page is made the same
+way, on your computer.
+
 The same goes for a reply: when you press the translate chip in X's reply box,
 your draft is translated, and read back, on your computer. x-stamp sends the
 draft nowhere; X receives it only when you press Reply.

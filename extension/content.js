@@ -110,19 +110,41 @@
     return translators.get(lang);
   }
 
+  // Stamps drawn while their language waited for its model, translated the
+  // moment it arrives.
+  const held = new Map(); // language -> [retry]
+  function hold(lang, retry) {
+    const list = held.get(lang) ?? [];
+    if (list.length < MAX_CACHED) list.push(retry);
+    held.set(lang, list);
+  }
+
   // Chrome downloads a language's model only in answer to a click or a key
-  // press, and spends the gesture on the first one asked for: a second create()
-  // in the same click is refused. So each click or key press on X fetches one
-  // waiting language; until then its quotes stay as written.
-  function fetchWanted(e) {
-    if (!wanted.size || !navigator.userActivation?.isActive) return;
-    if (e.target?.closest?.(".xstamp-say")) return; // that click is for the reply chip's model
-    const [lang] = wanted;
+  // press, made on x.com itself even when another site already fetched it, and
+  // spends the gesture on the first one asked for: a second create() in the same
+  // click is refused. Call this inside the click.
+  function fetchLanguage(lang) {
     wanted.delete(lang);
-    translators.set(lang, Translator.create({ sourceLanguage: lang, targetLanguage: READER }).catch(() => {
+    const t = Translator.create({ sourceLanguage: lang, targetLanguage: READER }).catch(() => {
       translators.delete(lang);
       return null;
-    }));
+    });
+    translators.set(lang, t);
+    t.then((ok) => {
+      if (!ok) return;
+      const list = held.get(lang) ?? [];
+      held.delete(lang);
+      for (const retry of list) retry();
+    });
+    return t;
+  }
+
+  // Any click or key press on X fetches one waiting language. A click on one of
+  // x-stamp's own buttons is spent by that button.
+  function fetchWanted(e) {
+    if (!wanted.size || !navigator.userActivation?.isActive) return;
+    if (e.target?.closest?.("[data-xstamp-gesture]")) return;
+    fetchLanguage([...wanted][0]);
   }
   addEventListener("pointerdown", fetchWanted, { capture: true, passive: true });
   addEventListener("keydown", fetchWanted, { capture: true, passive: true });
@@ -134,7 +156,10 @@
   async function translated(res, lang, late) {
     const quote = res?.status === "stamp" ? res.stamp.quote : null;
     if (!quote || !foreign(lang)) return res;
-    const work = translator(lang).then((t) => t?.translate(quote.text)).then((text) => {
+    const work = translator(lang).then((t) => {
+      if (!t && wanted.has(lang)) hold(lang, () => translated(res, lang, late).then((r) => r !== res && late(r)));
+      return t?.translate(quote.text);
+    }).then((text) => {
       if (!text?.trim() || text.trim().toLowerCase() === quote.text.toLowerCase()) return res;
       if (STUTTER.test(text) && !STUTTER.test(quote.text)) return res;
       return { ...res, stamp: { ...res.stamp, quote: { ...quote, text: text.trim(), from: lang.split("-")[0] } } };
@@ -177,13 +202,17 @@
       if (!replying) return null;
       text = [...dialog.querySelectorAll(SEL.text)].find((t) => !t.contains(box) && !box.contains(t));
     } else {
-      const page = location.pathname.match(/\/status\/(\d+)/);
-      if (!page) return null;
-      const main = [...document.querySelectorAll(SEL.post)].find((a) => postId(a) === page[1]);
-      text = main && [...main.querySelectorAll(SEL.text)].find((t) => !t.closest(SEL.quoted));
+      text = ownText(mainPost());
     }
     return text?.getAttribute("lang")?.toLowerCase() || null;
   }
+
+  // On a post's own page, the post itself (the one the URL names).
+  function mainPost() {
+    const page = location.pathname.match(/\/status\/(\d+)/);
+    return page ? [...document.querySelectorAll(SEL.post)].find((a) => postId(a) === page[1]) ?? null : null;
+  }
+  const ownText = (article) => article && [...article.querySelectorAll(SEL.text)].find((t) => !t.closest(SEL.quoted));
 
   // Replace the whole draft the way typing would, so X's editor keeps it
   // (measured 2026-10-21: keys typed after the swap joined the new text).
@@ -271,6 +300,7 @@
         chip = document.createElement("button");
         chip.type = "button";
         chip.className = "xstamp-say";
+        chip.dataset.xstampGesture = ""; // its click fetches the writer's model
         chip.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -291,6 +321,90 @@
       // Only on change: every write is a DOM change, and DOM changes run this.
       if (!chip.disabled && chip.textContent !== label) chip.textContent = label;
     }
+  }
+
+  // ---- a post's own page: the whole post, translated -----------------------
+
+  // Open a post in another language and its whole text shows translated under
+  // it, on this device, while the stamp still judges it (Parker, 2026-10-21: "I
+  // would love to see the FULL TRANSLATION (still with judgement)"). Nothing is
+  // held for it: it fills in when it's ready, a paragraph at a time.
+  const wholes = new WeakMap(); // main post -> { source, lang, panel }
+
+  function wholePanel(lang) {
+    const panel = document.createElement("div");
+    panel.className = "xstamp-whole";
+    const tag = document.createElement("div");
+    tag.className = "xstamp-whole-tag";
+    tag.textContent = `${languageName(lang)} → ${languageName(READER)}`;
+    const body = document.createElement("div");
+    body.className = "xstamp-whole-text";
+    panel.append(tag, body);
+    return panel;
+  }
+
+  async function fillWhole(w) {
+    const body = w.panel.querySelector(".xstamp-whole-text");
+    const t = await translator(w.lang);
+    if (!t) {
+      if (!wanted.has(w.lang)) { // Chrome can't translate this language
+        w.unavailable = true;
+        return w.panel.remove();
+      }
+      // The click Chrome asks for, offered where the reader is looking.
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "xstamp-fetch";
+      b.dataset.xstampGesture = "";
+      b.textContent = `translate from ${languageName(w.lang)}`;
+      b.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        b.disabled = true;
+        b.textContent = `fetching ${languageName(w.lang)}…`;
+        fetchLanguage(w.lang).then((ok) => (ok ? fillWhole(w) : (b.textContent = `${languageName(w.lang)} unavailable`)));
+      });
+      body.replaceChildren(b);
+      return;
+    }
+    body.textContent = "…";
+    const out = [];
+    for (const line of w.source.split("\n")) {
+      out.push(line.trim() ? ((await t.translate(line).catch(() => null)) ?? line) : "");
+      if (wholes.get(w.article) !== w) return; // the post changed under us
+      body.textContent = out.join("\n");
+      refit(w.article);
+    }
+  }
+
+  function refit(article) {
+    const stamp = article.querySelector(":scope > .xstamp");
+    if (stamp) fit(article, stamp);
+  }
+
+  // Keep one panel under the post this page is about, and none anywhere else.
+  function wholePost() {
+    const article = enabled && "Translator" in self ? mainPost() : null;
+    const own = ownText(article);
+    const lang = own?.getAttribute("lang")?.toLowerCase() || null;
+    let w = null;
+    if (own && foreign(lang)) {
+      const source = cleanText(own);
+      w = wholes.get(article);
+      if (!w || w.source !== source || w.lang !== lang) {
+        w = { article, source, lang, panel: wholePanel(lang) };
+        wholes.set(article, w);
+        fillWhole(w);
+      }
+      if (!w.unavailable && w.panel.previousElementSibling !== own) {
+        // X sets its font on each text element, not on the post: borrow it.
+        const { font, color } = getComputedStyle(own);
+        Object.assign(w.panel.style, { font, color });
+        own.after(w.panel);
+        refit(article);
+      }
+    }
+    for (const p of document.querySelectorAll(".xstamp-whole")) if (p !== w?.panel) p.remove();
   }
 
   // ---- ink ------------------------------------------------------------------
@@ -385,7 +499,12 @@
     const h = el.offsetHeight;
     const pad = 12;
     const x = Math.min(Math.max(W * SPOT.left, w / 2 + pad), W - w / 2 - pad);
-    const y = Math.min(Math.max(H * SPOT.top, h / 2 + pad), H - h / 2 - pad);
+    let top = H * SPOT.top;
+    // On a post's own page, stay off the translation under its text when the
+    // post has room below it.
+    const panel = article.querySelector(".xstamp-whole");
+    if (panel) top = Math.max(top, panel.getBoundingClientRect().bottom - article.getBoundingClientRect().top + h / 2 + pad);
+    const y = Math.min(Math.max(top, h / 2 + pad), H - h / 2 - pad);
     el.style.left = `${Math.round(x)}px`;
     el.style.top = `${Math.round(y)}px`;
   }
@@ -556,6 +675,7 @@
       scanQueued = false;
       scan();
       composers();
+      wholePost();
     });
   });
   mutations.observe(document.documentElement, { childList: true, subtree: true });
@@ -570,7 +690,7 @@
     meterEl?.remove();
     meterEl = null;
     enabled = false;
-    for (const el of document.querySelectorAll(".xstamp-readback")) el.remove();
+    for (const el of document.querySelectorAll(".xstamp-readback, .xstamp-whole")) el.remove();
     // The newer copy puts its own chip in; this copy's goes.
     for (const box of document.querySelectorAll(COMPOSER.box)) chips.get(box)?.remove();
   }
@@ -679,6 +799,7 @@
     enabled = on;
     startMeter();
     composers();
+    wholePost();
     if (on) {
       for (const a of document.querySelectorAll(SEL.post)) {
         ask(a);
