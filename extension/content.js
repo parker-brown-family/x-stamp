@@ -113,8 +113,9 @@
   // press, and spends the gesture on the first one asked for: a second create()
   // in the same click is refused. So each click or key press on X fetches one
   // waiting language; until then its quotes stay as written.
-  function fetchWanted() {
+  function fetchWanted(e) {
     if (!wanted.size || !navigator.userActivation?.isActive) return;
+    if (e.target?.closest?.(".xstamp-say")) return; // that click is for the reply chip's model
     const [lang] = wanted;
     wanted.delete(lang);
     translators.set(lang, Translator.create({ sourceLanguage: lang, targetLanguage: READER }).catch(() => {
@@ -141,6 +142,154 @@
     if (done) return done;
     work.then((later) => later !== res && late(later));
     return res;
+  }
+
+  // ---- replying in the post's language ------------------------------------
+
+  // Under a post X marks as another language, a chip in the reply box
+  // translates the draft into it on this device (docs/plans/reply-translate).
+  // Ctrl+Z can't undo the swap in X's editor, so the chip then offers the
+  // reader's words back, and a faint line reads the translation back to them.
+  const COMPOSER = {
+    box: '[data-testid="tweetTextarea_0"]',
+    send: '[data-testid="tweetButtonInline"], [data-testid="tweetButton"]',
+  };
+  const writers = new Map(); // language -> Promise<Translator>, reader's language into it
+  const drafts = new WeakMap(); // reply box -> { english, said } while it holds a translation
+  const chips = new WeakMap(); // reply box -> its chip
+
+  function languageName(code) {
+    try { return new Intl.DisplayNames([READER], { type: "language" }).of(code) ?? code; }
+    catch { return code; }
+  }
+  const draftText = (box) => box.innerText.trim();
+
+  // The language of the post a reply box answers. Null when it answers none
+  // (a new post, a quote post) or X didn't say.
+  function replyLang(box) {
+    const dialog = box.closest('[role="dialog"]');
+    let text;
+    if (dialog) {
+      const replying = [...dialog.querySelectorAll("div, span")].some(
+        (el) => el.firstChild?.nodeType === 3 && /^\s*Replying to\b/.test(el.firstChild.textContent),
+      );
+      if (!replying) return null;
+      text = [...dialog.querySelectorAll(SEL.text)].find((t) => !t.contains(box) && !box.contains(t));
+    } else {
+      const page = location.pathname.match(/\/status\/(\d+)/);
+      if (!page) return null;
+      const main = [...document.querySelectorAll(SEL.post)].find((a) => postId(a) === page[1]);
+      text = main && [...main.querySelectorAll(SEL.text)].find((t) => !t.closest(SEL.quoted));
+    }
+    return text?.getAttribute("lang")?.toLowerCase() || null;
+  }
+
+  // Replace the whole draft the way typing would, so X's editor keeps it
+  // (measured 2026-10-21: keys typed after the swap joined the new text).
+  function putDraft(box, text) {
+    box.focus();
+    getSelection().selectAllChildren(box);
+    document.execCommand("insertText", false, text);
+  }
+
+  function readBackLine(box, create) {
+    const anchor = box.closest(".DraftEditor-root") ?? box;
+    let line = anchor.nextElementSibling?.classList.contains("xstamp-readback") ? anchor.nextElementSibling : null;
+    if (!line && create) {
+      line = document.createElement("div");
+      line.className = "xstamp-readback";
+      anchor.after(line);
+    }
+    return line;
+  }
+
+  // The translation, translated back by the stamps' own translator, so the
+  // reader sees what they are about to say. After the swap, never before it.
+  async function readBack(box, lang, said) {
+    readBackLine(box, true).textContent = "reads back: …";
+    const t = await translator(lang);
+    const back = t ? await t.translate(said).catch(() => null) : null;
+    if (drafts.get(box)?.said !== said) return; // edited or undone meanwhile
+    readBackLine(box, true).textContent = back?.trim() ? `reads back: “${back.trim()}”` : "reads back: not available yet";
+  }
+
+  async function say(box, lang, chip) {
+    const d = drafts.get(box);
+    if (d && d.said === draftText(box)) {
+      drafts.delete(box);
+      putDraft(box, d.english);
+      return composers();
+    }
+    const english = draftText(box);
+    if (!english) return;
+    // Created inside the click: a language's first use downloads its model,
+    // and Chrome allows that only in answer to a click.
+    if (!writers.has(lang)) {
+      writers.set(lang, Translator.create({
+        sourceLanguage: READER, targetLanguage: lang,
+        monitor: (m) => m.addEventListener("downloadprogress", () => {
+          chip.textContent = `fetching ${languageName(lang)}…`;
+        }),
+      }).catch((e) => { writers.delete(lang); throw e; }));
+    }
+    chip.disabled = true;
+    try {
+      const said = (await (await writers.get(lang)).translate(english)).trim();
+      if (!said || draftText(box) !== english) return; // they kept typing
+      putDraft(box, said);
+      const now = draftText(box);
+      drafts.set(box, { english, said: now });
+      readBack(box, lang, now);
+    } catch {
+      chip.textContent = `${languageName(lang)} unavailable`;
+      await new Promise((r) => setTimeout(r, 1500));
+    } finally {
+      chip.disabled = false;
+      composers();
+    }
+  }
+
+  // Put a chip on each reply box that answers a post in another language, and
+  // keep it saying the right thing as the draft changes.
+  function composers() {
+    for (const box of document.querySelectorAll(COMPOSER.box)) {
+      const lang = enabled && "Translator" in self ? replyLang(box) : null;
+      const d = drafts.get(box);
+      if (d && d.said !== draftText(box)) drafts.delete(box); // edited: the words are theirs now
+      if (!drafts.has(box)) readBackLine(box, false)?.remove();
+      let chip = chips.get(box);
+      if (!foreign(lang)) {
+        chip?.remove();
+        continue;
+      }
+      let root = box;
+      while (root && !root.querySelector(COMPOSER.send)) root = root.parentElement;
+      const send = root?.querySelector(COMPOSER.send);
+      if (!send) continue;
+      if (!chip) {
+        chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "xstamp-say";
+        chip.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!chip.disabled) say(box, chip.dataset.lang, chip);
+        });
+        chips.set(box, chip);
+      }
+      for (const old of root.querySelectorAll(".xstamp-say")) if (old !== chip) old.remove(); // an older copy's
+      if (!chip.isConnected || !chip.nextElementSibling?.contains(send)) {
+        // Beside Reply, in the toolbar's row: X wraps the button in a column,
+        // where the chip would stack on top of it.
+        let slot = send;
+        while (slot.parentElement !== root && getComputedStyle(slot.parentElement).flexDirection !== "row") slot = slot.parentElement;
+        slot.before(chip);
+      }
+      chip.dataset.lang = lang;
+      const label = drafts.has(box) ? `back to ${languageName(READER)}` : `translate to ${languageName(lang)}`;
+      // Only on change: every write is a DOM change, and DOM changes run this.
+      if (!chip.disabled && chip.textContent !== label) chip.textContent = label;
+    }
   }
 
   // ---- ink ------------------------------------------------------------------
@@ -388,6 +537,7 @@
     requestAnimationFrame(() => {
       scanQueued = false;
       scan();
+      composers();
     });
   });
   mutations.observe(document.documentElement, { childList: true, subtree: true });
@@ -402,6 +552,9 @@
     meterEl?.remove();
     meterEl = null;
     enabled = false;
+    for (const el of document.querySelectorAll(".xstamp-readback")) el.remove();
+    // The newer copy puts its own chip in; this copy's goes.
+    for (const box of document.querySelectorAll(COMPOSER.box)) chips.get(box)?.remove();
   }
 
   // ---- the meter: today's posts and spend, on screen ---------------------------
@@ -507,6 +660,7 @@
   function setEnabled(on) {
     enabled = on;
     startMeter();
+    composers();
     if (on) {
       for (const a of document.querySelectorAll(SEL.post)) {
         ask(a);

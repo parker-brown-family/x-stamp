@@ -15,6 +15,7 @@ import { openrouterKey } from "../scripts/openrouter-key.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ext = join(root, "extension");
 const fixture = readFileSync(join(root, "test/fixture/home.html"), "utf8");
+const statusFixture = readFileSync(join(root, "test/fixture/status.html"), "utf8");
 const key = openrouterKey();
 
 const TEXT_POSTS = 19; // fixture posts with words; 1005 is a picture only
@@ -41,7 +42,7 @@ try {
 
   await ctx.route("https://x.com/**", (route) =>
     route.request().resourceType() === "document"
-      ? route.fulfill({ contentType: "text/html", body: fixture })
+      ? route.fulfill({ contentType: "text/html", body: /\/status\/\d+/.test(route.request().url()) ? statusFixture : fixture })
       : route.fulfill({ status: 204 }),
   );
   const page = await ctx.newPage();
@@ -198,6 +199,65 @@ try {
   assert.ok(duringFlight < passed / 3, `power scroll paid for ${duringFlight} of ${passed} posts flown past`);
   assert.ok(landed.visible > 0 && landed.stamped >= landed.visible - 1, `stamps died after a power scroll: ${landed.stamped}/${landed.visible}`);
   await fast.close();
+
+  // Replying in the post's language. Playwright's Chromium has the Translator
+  // API on https pages but runs with component updates off, so it can't fetch
+  // a language. The test works in x-stamp's own isolated world (the page's
+  // globals never reach it): with the API taken away there is no chip; with a
+  // stand-in the chip has to appear, swap the draft, read it back, give the
+  // English back, and step back to TRANSLATE once the translation is edited.
+  // Real translation and X's own editor were checked live in Chrome 155
+  // (docs/plans/reply-translate).
+  const post = await ctx.newPage();
+  const cdp = await ctx.newCDPSession(post);
+  let world = null;
+  cdp.on("Runtime.executionContextCreated", ({ context }) => {
+    if (context.auxData?.type === "isolated" && (context.name === "x-stamp" || context.origin?.startsWith("chrome-extension://"))) world = context.id;
+  });
+  await cdp.send("Runtime.enable");
+  const inWorld = async (expression) => (await cdp.send("Runtime.evaluate", { contextId: world, expression, awaitPromise: true, returnByValue: true })).result.value;
+  const standIn = () => inWorld(`self.Translator = {
+    availability: async () => "available",
+    create: async ({ sourceLanguage: s, targetLanguage: t }) => ({ translate: async (x) => "[" + s + ">" + t + "] " + x }),
+  }; document.body.append(document.createElement("i"));`);
+  await post.goto("https://x.com/tanaka_builds/status/3001");
+  await post.waitForFunction(() => document.querySelector(".xstamp-meter"));
+  assert.ok(world, "never saw x-stamp's isolated world");
+  step(`Playwright's own Translator, en→ja: ${await inWorld(`"Translator" in self ? Translator.availability({ sourceLanguage: "en", targetLanguage: "ja" }) : "absent"`)}`);
+  await inWorld(`delete self.Translator; document.body.append(document.createElement("i"));`);
+  await post.waitForTimeout(300);
+  assert.equal(await post.$$eval(".xstamp-say", (e) => e.length), 0, "a translate chip stayed with no Translator");
+  await standIn();
+  const box = post.locator('[data-testid="tweetTextarea_0"]');
+  const chip = post.locator(".xstamp-say");
+  await chip.waitFor({ timeout: 3000 });
+  assert.equal(await chip.innerText(), "TRANSLATE TO JAPANESE");
+  await box.click();
+  await post.keyboard.type("Can you share the source code?");
+  await chip.click();
+  await post.waitForFunction(() => /reads back: “/.test(document.querySelector(".xstamp-readback")?.textContent ?? ""));
+  assert.equal(await box.innerText(), "[en>ja] Can you share the source code?");
+  assert.equal(await post.locator(".xstamp-readback").innerText(), "reads back: “[ja>en] [en>ja] Can you share the source code?”");
+  assert.equal(await chip.innerText(), "BACK TO ENGLISH");
+  await chip.click();
+  await post.waitForFunction(() => document.querySelector(".xstamp-say")?.textContent === "translate to Japanese");
+  assert.equal(await box.innerText(), "Can you share the source code?", "BACK did not restore the English");
+  assert.equal(await post.$$eval(".xstamp-readback", (e) => e.length), 0, "the reads-back line outlived the translation");
+  await chip.click();
+  await post.waitForFunction(() => document.querySelector(".xstamp-say")?.textContent === "back to English");
+  await box.press("End");
+  await post.keyboard.type("!");
+  await post.waitForFunction(() => document.querySelector(".xstamp-say")?.textContent === "translate to Japanese");
+  assert.equal(await post.$$eval(".xstamp-readback", (e) => e.length), 0, "an edited translation kept its reads-back line");
+  step("reply box: no chip without a Translator; with one, translate, read back, back to English, and an edit hands the words back");
+  world = null;
+  await post.goto("https://x.com/tanaka_builds/status/3001?en");
+  await post.waitForFunction(() => document.querySelector(".xstamp-meter"));
+  assert.ok(world, "never saw x-stamp's isolated world on the English post");
+  await standIn();
+  await post.waitForTimeout(500);
+  assert.equal(await post.$$eval(".xstamp-say", (e) => e.length), 0, "a translate chip appeared under a post in the reader's own language");
+  await post.close();
 
   console.log(`\nPASS · ${s.requests} requests · avg ${Math.round(s.ms / (s.requests - s.errors))} ms per answer · ` +
     (s.costKnown ? `$${(s.cost / s.costKnown).toFixed(6)} per post` : "cost not reported"));

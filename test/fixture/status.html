@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<!-- A stand-in for a post's own page on x.com: the post, then X's inline reply
+     box (a contenteditable with X's test id) and its Reply button. The post is
+     Japanese unless the URL carries ?en. -->
+<head>
+<meta charset="utf-8">
+<title>Post / X</title>
+<style>
+  body { margin: 0; background: rgb(0, 0, 0); color: rgb(231, 233, 234); font: 15px/20px -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { width: 600px; margin: 0 auto; border-left: 1px solid #2f3336; border-right: 1px solid #2f3336; }
+  article { position: relative; overflow: hidden; padding: 12px 16px; border-bottom: 1px solid #2f3336; min-height: 160px; }
+  .who { color: #71767b; margin-bottom: 4px; }
+  .who b { color: rgb(231, 233, 234); }
+  .who a { color: #71767b; text-decoration: none; }
+  .reply { padding: 12px 16px; border-bottom: 1px solid #2f3336; }
+  [data-testid="tweetTextarea_0"] { min-height: 24px; outline: none; font-size: 20px; }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+  .toolbar .icons { color: #1d9bf0; letter-spacing: 12px; }
+  .toolbar .right { display: flex; align-items: center; }
+  [data-testid="tweetButtonInline"] { background: #eff3f4; color: #0f1419; border: 0; border-radius: 999px; padding: 8px 16px; font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <article data-testid="tweet">
+    <div class="who" data-testid="User-Name"><b>Tanaka Ren</b> @tanaka_builds · <a href="/tanaka_builds/status/3001"><time datetime="2026-10-21T12:00:00Z">2h</time></a></div>
+    <div data-testid="tweetText"></div>
+  </article>
+  <div class="reply">
+    <div class="who">Replying to <a href="/tanaka_builds">@tanaka_builds</a></div>
+    <div data-testid="tweetTextarea_0" contenteditable="true" role="textbox"></div>
+    <div class="toolbar"><span class="icons">▣ ◎ ☺</span><div class="right"><button data-testid="tweetButtonInline">Reply</button></div></div>
+  </div>
+</main>
+<script>
+  const en = location.search.includes("en");
+  const text = document.querySelector('[data-testid="tweetText"]');
+  text.setAttribute("lang", en ? "en" : "ja");
+  text.textContent = en
+    ? "Rewrote our build tool in Rust and build times dropped by half. Open source today."
+    : "ビルドツールをRustで書き直したら、ビルド時間が半分になりました。今日オープンソースで公開します。";
+</script>
+</body>
+</html>

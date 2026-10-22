@@ -49,6 +49,15 @@ post in that language shows up; until then those quotes stay as written. A
 translation takes about 25 ms. A stamp never waits more than 250 ms for one:
 past that it shows the post's own words.
 
+Replying works the other way. Under a post in another language, the reply box
+gets a `TRANSLATE TO JAPANESE` chip (or whatever the post's language is) beside
+**Reply**. It swaps your draft for the translation and shows a faint line under
+it, `reads back: “…”`: the translation turned back into your language, so you
+can see what you're about to say before you say it. `BACK TO ENGLISH` puts your
+words back, because Ctrl+Z can't. Nothing happens until you click, and the
+first click for a language fetches its translator (about 5 seconds for
+Japanese).
+
 ## What you need
 
 - **Chrome** (or another Chromium browser: Edge, Brave, Chromium).
@@ -155,6 +164,7 @@ separate limits on author, quote and card text; oversized posts are skipped.
 | Type, kind of engagement, topic, quote, and whether a second type holds: one batched request | Jev, `extension/lib/jev.js` |
 | Whether to stamp, the title, faint or full ink | code, `extension/lib/rule.js` |
 | A quote in another language, translated into yours | Chrome's on-device translator, called from `extension/content.js` |
+| Your reply, translated into the post's language when you click, and read back | Chrome's on-device translator, called from `extension/content.js` |
 | Paid ads | code: X's own "Ad" label decides, Jev isn't asked |
 | Key, cache, on/off, cost and error counts | code, `extension/background.js` |
 
