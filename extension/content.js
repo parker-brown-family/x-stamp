@@ -61,6 +61,8 @@
     const own = texts.find((t) => !t.closest(SEL.quoted)) ?? null;
     const quoted = texts.find((t) => t !== own && t.closest(SEL.quoted)) ?? null;
     const post = { text: own ? cleanText(own) : "" };
+    // X marks the language of the post's own text; absent means nobody said.
+    const lang = own?.getAttribute("lang")?.toLowerCase() || null;
     const who = article.querySelector(SEL.author)?.innerText.split("\n") ?? [];
     const handle = who.join(" ").match(/@\w{1,30}/)?.[0];
     if (who[0]) post.author = handle ? `${who[0]} (${handle})` : who[0];
@@ -71,7 +73,74 @@
     const promoted = [...article.querySelectorAll("span")].some(
       (s) => !s.childElementCount && /^(Ad|Promoted)$/.test(s.textContent.trim()) && !s.closest(SEL.text),
     );
-    return { id: postId(article), post, promoted, handle: handle ?? who[0] ?? "" };
+    return { id: postId(article), post, promoted, lang, handle: handle ?? who[0] ?? "" };
+  }
+
+  // ---- the quote, in the reader's language --------------------------------
+
+  // Jev can only pick the post's own words, so a Finnish post gets a Finnish
+  // quote. Chrome's built-in translator turns it into the reader's language on
+  // this device, nothing sent anywhere: about 25 ms a quote once the language's
+  // model is here, against about 180 ms for Jev (Chrome 155, 2026-10-21). It
+  // runs as the answer arrives, usually two screens before the post does.
+  const READER = (navigator.language || "en").split("-")[0].toLowerCase();
+  // Never hold a stamp for a translation: past this, the post's own words show.
+  const TRANSLATE_MS = 250;
+  const translators = new Map(); // language -> Promise<Translator | null>
+  const wanted = new Set(); // languages whose model is not on this device yet
+
+  const foreign = (lang) => !!lang && lang.split("-")[0] !== READER && "Translator" in self;
+  // The translator can run away on what isn't language: a crypto address X
+  // marked Finnish came back as "…2J2J2J2J…000000". A stutter the original
+  // doesn't have means the original words are kept.
+  const STUTTER = /(.{1,4}?)\1{4,}/u;
+
+  // Asked for when the post is asked about, so the translator is ready by the
+  // time Jev answers.
+  function translator(lang) {
+    if (!translators.has(lang)) {
+      const pair = { sourceLanguage: lang, targetLanguage: READER };
+      translators.set(lang, Translator.availability(pair).then((state) => {
+        if (state === "available") return Translator.create(pair);
+        if (state !== "unavailable") wanted.add(lang);
+        return null;
+      }).catch(() => null));
+    }
+    return translators.get(lang);
+  }
+
+  // Chrome downloads a language's model only in answer to a click or a key
+  // press. The first one on X after a post in a new language fetches it; until
+  // then that language's quotes stay as written.
+  function fetchWanted() {
+    if (!wanted.size || !navigator.userActivation?.isActive) return;
+    for (const lang of wanted) {
+      translators.set(lang, Translator.create({ sourceLanguage: lang, targetLanguage: READER }).catch(() => {
+        translators.delete(lang);
+        return null;
+      }));
+    }
+    wanted.clear();
+  }
+  addEventListener("pointerdown", fetchWanted, { capture: true, passive: true });
+  addEventListener("keydown", fetchWanted, { capture: true, passive: true });
+
+  // The answer with its quote translated, or as it came when the translation
+  // isn't back in time. Chrome translates one quote at a time, so a burst of
+  // answers (a reload, served from the cache) queues up; a translation that
+  // lands late goes to `late`, for posts whose stamp isn't drawn yet.
+  async function translated(res, lang, late) {
+    const quote = res?.status === "stamp" ? res.stamp.quote : null;
+    if (!quote || !foreign(lang)) return res;
+    const work = translator(lang).then((t) => t?.translate(quote.text)).then((text) => {
+      if (!text?.trim() || text.trim().toLowerCase() === quote.text.toLowerCase()) return res;
+      if (STUTTER.test(text) && !STUTTER.test(quote.text)) return res;
+      return { ...res, stamp: { ...res.stamp, quote: { ...quote, text: text.trim(), from: lang.split("-")[0] } } };
+    }).catch(() => res);
+    const done = await Promise.race([work, new Promise((r) => setTimeout(r, TRANSLATE_MS, null))]);
+    if (done) return done;
+    work.then((later) => later !== res && late(later));
+    return res;
   }
 
   // ---- ink ------------------------------------------------------------------
@@ -92,7 +161,7 @@
   const PLAIN_INK = "#94a3b8";
   const ink = (type) => INK[type] ?? PLAIN_INK;
 
-  function card(cls, type, titleText, quoteText, faint, also) {
+  function card(cls, type, titleText, quote, faint, also) {
     const el = document.createElement("div");
     el.className = `xstamp-card ${cls}${faint ? " xstamp-faint" : ""}`;
     el.style.setProperty("--ink", ink(type));
@@ -102,10 +171,17 @@
       t.textContent = titleText;
       el.append(t);
     }
-    if (quoteText) {
+    if (quote?.text) {
       const q = document.createElement("div");
       q.className = "xstamp-quote";
-      q.textContent = `“${quoteText}”`;
+      q.textContent = `“${quote.text}”`;
+      // A translated quote is no longer the post's own words: say where from.
+      if (quote.from) {
+        const l = document.createElement("span");
+        l.className = "xstamp-lang";
+        l.textContent = quote.from.toUpperCase();
+        q.append(l);
+      }
       el.append(q);
     }
     // A second type rides inside the same card, small, in its own colour: one
@@ -129,7 +205,7 @@
     el.className = "xstamp" + (animate ? " xstamp-drop" : "");
     el.dataset.xstampId = id;
     el.setAttribute("aria-hidden", "true");
-    el.append(card("xstamp-first", primary?.type, primary?.title, quote?.text, primary?.faint, second));
+    el.append(card("xstamp-first", primary?.type, primary?.title, quote, primary?.faint, second));
     article.append(el);
     fit(article, el);
   }
@@ -178,16 +254,18 @@
 
   function ask(article) {
     if (!enabled) return null;
-    const { id, post, promoted } = readPost(article);
+    const { id, post, promoted, lang } = readPost(article);
     if (!id || !post.text) return null; // a picture or video with no words: nothing to judge
     if (isComment(article, id)) return null;
     if (results.has(id)) return Promise.resolve(results.get(id));
     if (!asked.has(id)) {
       if (asked.size >= MAX_PENDING) return null;
+      if (foreign(lang)) translator(lang); // warms up while Jev thinks
       asked.set(
         id,
         chrome.runtime
           .sendMessage({ type: "judge", id, post, promoted })
+          .then((res) => translated(res, lang, (later) => results.has(id) && results.set(id, later)))
           .then((res) => {
             if (res && (res.status === "stamp" || res.status === "blank")) {
               results.set(id, res);

@@ -41,6 +41,14 @@ that answers typed questions with probabilities instead of writing text. That's
 why every quoted word is the post's own: Jev picks the phrase, it never writes
 one.
 
+A post in another language gets its quote translated into your browser's
+language by Chrome's built-in translator, on your computer, with a small tag
+saying where it came from: `“The answers are diamond” FI`. Chrome fetches a
+language's translator the first time you click or press a key on X after a
+post in that language shows up; until then those quotes stay as written. A
+translation takes about 25 ms. A stamp never waits more than 250 ms for one:
+past that it shows the post's own words.
+
 ## What you need
 
 - **Chrome** (or another Chromium browser: Edge, Brave, Chromium).
@@ -121,7 +129,8 @@ For each post that comes near the screen, the extension sends **the post's
 text**, and when present its author's display name and handle, its link-preview
 card, and the text of a post it quotes. These go to OpenRouter's
 `/api/v1/systemone` endpoint using your key. Nothing else leaves your browser:
-no browsing history, no account details, no images. Answers are cached for the
+no browsing history, no account details, no images. Translating a quote sends
+nothing: it happens on your computer. Answers are cached for the
 browser session, keeping the newest 500 answers within 1 MB. Older answers can
 be asked again after eviction. Full details:
 [PRIVACY.md](PRIVACY.md).
@@ -145,6 +154,7 @@ separate limits on author, quote and card text; oversized posts are skipped.
 | Cut every run of 2–10 consecutive words as a candidate quote | code, `extension/lib/candidates.js` |
 | Type, kind of engagement, topic, quote, and whether a second type holds: one batched request | Jev, `extension/lib/jev.js` |
 | Whether to stamp, the title, faint or full ink | code, `extension/lib/rule.js` |
+| A quote in another language, translated into yours | Chrome's on-device translator, called from `extension/content.js` |
 | Paid ads | code: X's own "Ad" label decides, Jev isn't asked |
 | Key, cache, on/off, cost and error counts | code, `extension/background.js` |
 

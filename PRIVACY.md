@@ -22,6 +22,11 @@ request there: <https://openrouter.ai/privacy>.
 Nothing else is sent: no browsing history, no pages other than x.com, no images,
 no information about your X account, and nothing to the extension's author.
 
+When a stamp's quote is in another language, Chrome's built-in translator turns
+it into your browser's language on your computer. The quote is not sent
+anywhere to be translated. The first time a language needs translating, Chrome
+downloads its translator once, after you click or press a key on x.com.
+
 Switching stamps off cancels waiting uploads and aborts active requests. Data
 already transmitted cannot be recalled. An explicit **Ask Jev** in Options can
 send the sample you enter while stamps are off. All requests share the limits
